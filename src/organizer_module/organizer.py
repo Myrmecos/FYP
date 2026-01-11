@@ -7,7 +7,7 @@ IRA_height = 62
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from tracking_module.track import Tracker
+from presence_detection_workspace.src.tracking_module.track_no_filter import Tracker
 from heatsource_detection_module.extract import HeatSourceDetector
 from dataset import ThermalDataset
 

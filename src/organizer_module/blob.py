@@ -10,6 +10,7 @@ class Blob:
         self.centroid = centroid
         self.temp_history = [] # if temp is decreasing, is heat residual, not human
         self.centroid_history = [] # if move is directional (in some segments), likely human
+        self.queue_len = 400 # length of history to keep, longer history for better analysis
 
     def update(self, mask, masked_temps):
         self.mask = mask
@@ -19,9 +20,9 @@ class Blob:
         self.temp_history.append(self.mean_temp)
         self.centroid_history.append(self.centroid)
 
-        if len(self.temp_history) > 400: # about 50 seconds at 8 fps
+        if len(self.temp_history) > self.queue_len:
             self.temp_history.pop(0)
-        if len(self.centroid_history) > 400:
+        if len(self.centroid_history) > self.queue_len:
             self.centroid_history.pop(0)
     
     def get_position(self):

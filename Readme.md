@@ -20,8 +20,8 @@
 2. cleaning: get connected components, remove components with small area
 
 # Tracking
-1. for every blob, try to find match in detected heat regions (consider max-flow, min-cut problem)
-2. for new hot regions with no match to previous, if it is hot enough (larger than bg by 3), create a new blob
+1. for every blob, try to find match in detected heat regions (consider max-flow, min-cut problem): COMPLETED
+2. for new hot regions with no match to previous, if it is hot enough (larger than bg by 3), create a new blob: DONE
 3. TODO: use particle filter to track and predict human motion.
 
 # Motion detection

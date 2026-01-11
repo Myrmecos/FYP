@@ -13,7 +13,8 @@ class Tracker:
     def __init__(self):
         self.blobs = []  # list of Blob objects
     
-    def update_blobs(self, detected_heat_sources, original_ira_img, background_avg):
+    # move Hungarian algorithm out to here
+    def _associate_blobs(self, detected_heat_sources):
         # we use simple IoU based tracking
         # the intersection over union (IoU) between existing blobs and detected heat sources
         # detected_heat_sources: a list of (mask) of detected heat sources [mask0, mask1, ...]
@@ -23,6 +24,7 @@ class Tracker:
         #       which will be used to compare against detected_heat_sources to compute IoU
 
         # TODO: use Hungarian algorithm to associate existing blobs with detected heat sources
+
         # 1. compute IoU matrix
         num_existing = len(self.blobs)
         num_detected = len(detected_heat_sources)
@@ -40,6 +42,19 @@ class Tracker:
         for r, c in zip(row_ind, col_ind):
             if iou_matrix[r, c] > 0.3:  # threshold for matching
                 matched_pairs.append((r, c))
+        return matched_pairs
+
+    
+    def update_blobs(self, detected_heat_sources, original_ira_img, background_avg):
+        # we use simple IoU based tracking
+        # the intersection over union (IoU) between existing blobs and detected heat sources
+        # detected_heat_sources: a list of (mask) of detected heat sources [mask0, mask1, ...]
+        #       the masks are binary numpy arrays of the same shape as original_ira_img
+        # existing blobs: self.blobs, containing Blobs objects [blob0, blob1, ...]
+        #       blob.get_mask() returns the mask of the blob,
+        matched_pairs = self._associate_blobs(detected_heat_sources)
+        num_existing = len(self.blobs)
+        num_detected = len(detected_heat_sources)
 
         for r, c in matched_pairs:
             blob = self.blobs[r]
