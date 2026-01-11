@@ -54,7 +54,7 @@ class HeatSourceDetector:
         mean_val = np.mean(unmasked_values)
         return mean_val
     
-    def remove_small_regions(self, mask, min_size=50):
+    def remove_small_regions(self, mask, min_size):
         # remove small connected components in the binary mask
         num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask.astype('uint8'), connectivity=8)
         cleaned_mask = np.zeros_like(mask)
@@ -63,7 +63,7 @@ class HeatSourceDetector:
                 cleaned_mask[labels == i] = 1
         return cleaned_mask
     
-    def get_connected_components(self, mask, clean=True, min_size=50):
+    def get_connected_components(self, mask, clean=True, min_size=400):
         if clean:
             mask = self.remove_small_regions(mask, min_size)
         # return list of connected component masks

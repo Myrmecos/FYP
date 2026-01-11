@@ -10,92 +10,8 @@ from scipy.optimize import linear_sum_assignment
 from data_collection_module import utils
 
 
-class Tracker:
-    def __init__(self):
-        self.blobs = []  # list of KalmanBlob objects
-    
-    # move Hungarian algorithm out to here
-    def _associate_blobs(self, detected_heat_sources):
-        # we use simple IoU based tracking
-        # the intersection over union (IoU) between existing blobs and detected heat sources
-        # detected_heat_sources: a list of (mask) of detected heat sources [mask0, mask1, ...]
-        #       the masks are binary numpy arrays of the same shape as original_ira_img
-        # existing blobs: self.blobs, containing Blobs objects [blob0, blob1, ...]
-        #       blob.get_mask() returns the mask of the blob, 
-        #       which will be used to compare against detected_heat_sources to compute IoU
+from tracking_module.track_kalman import Tracker
 
-        # TODO: use Hungarian algorithm to associate existing blobs with detected heat sources
-
-        # 1. compute IoU matrix
-        num_existing = len(self.blobs)
-        num_detected = len(detected_heat_sources)
-        iou_matrix = np.zeros((num_existing, num_detected))
-        for i, blob in enumerate(self.blobs):
-            predicted_bbox = blob.predict()
-            for j, new_mask in enumerate(detected_heat_sources):
-                new_bbox = mask_to_bbox(new_mask)
-                iou = self._compute_iou(predicted_bbox, new_bbox)
-                iou_matrix[i, j] = iou
-        # 2. Hungarian algorithm to find optimal assignment
-        row_ind, col_ind = linear_sum_assignment(-iou_matrix)  # maximize IoU
-
-        # 3. create matching result
-        matched_pairs = []
-        for r, c in zip(row_ind, col_ind):
-            if iou_matrix[r, c] > 0.3:  # threshold for matching
-                matched_pairs.append((r, c))
-        return matched_pairs
-
-    
-    def update_blobs(self, detected_heat_sources, original_ira_img, background_avg):
-        # we use simple IoU based tracking
-        # the intersection over union (IoU) between existing blobs and detected heat sources
-        # detected_heat_sources: a list of (mask) of detected heat sources [mask0, mask1, ...]
-        #       the masks are binary numpy arrays of the same shape as original_ira_img
-        # existing blobs: self.blobs, containing Blobs objects [blob0, blob1, ...]
-        #       blob.get_mask() returns the mask of the blob,
-        matched_pairs = self._associate_blobs(detected_heat_sources)
-        num_existing = len(self.blobs)
-        num_detected = len(detected_heat_sources)
-
-        for r, c in matched_pairs:
-            blob = self.blobs[r]
-            mask = detected_heat_sources[c]
-            masked_temps = original_ira_img[mask.astype(bool)]
-            blob.update(mask, masked_temps, True)
-
-        unmatched_existing_blobs_indices = set(range(num_existing)) - set([r for r, c in matched_pairs])
-        unmatched_new_heat_sources_indices = set(range(num_detected)) - set([c for r, c in matched_pairs])
-
-        # check for new heat sources that do not match existing blobs
-        for source_idx in unmatched_new_heat_sources_indices:
-            source = detected_heat_sources[source_idx]
-            mask = source
-            masked_temps = original_ira_img[mask.astype(bool)]
-            avg_temp = masked_temps.mean()
-            if avg_temp < background_avg + 3:  # threshold to filter out noise
-                continue
-            new_blob = KalmanBlob(mask=mask, masked_temps=masked_temps)
-            self.blobs.append(new_blob)
-        
-        for blob_idx in unmatched_existing_blobs_indices:
-            blob = self.blobs[blob_idx]
-            blob.update(blob.get_mask(), blob.masked_temps, False)
-
-    def _compute_iou(self, bbox1, bbox2):
-        # bbox: [x_min, y_min, x_max, y_max]
-        xA = max(bbox1[0], bbox2[0])
-        yA = max(bbox1[1], bbox2[1])
-        xB = min(bbox1[2], bbox2[2])
-        yB = min(bbox1[3], bbox2[3])
-
-        interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
-        boxAArea = (bbox1[2] - bbox1[0] + 1) * (bbox1[3] - bbox1[1] + 1)
-        boxBArea = (bbox2[2] - bbox2[0] + 1) * (bbox2[3] - bbox2[1] + 1)
-
-        iou = interArea / float(boxAArea + boxBArea - interArea)
-        return iou
-        
 # use data from hall1, frame 18055-18115 for testing
 if __name__ == "__main__":
     from dataset import ThermalDataset
@@ -111,7 +27,7 @@ if __name__ == "__main__":
     for idx in range(17000, 18260): #18115
         ira_highres = dataset.get_ira_highres(idx)
         thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
-        cleaned_mask = detector.get_connected_components(mask, min_size=100)
+        cleaned_mask = detector.get_connected_components(mask, min_size=10)
         tracker.update_blobs(cleaned_mask, ira_highres, detector.get_unmasked_mean(ira_highres, mask))
 
         ira_color = utils.colorize_thermal_map(ira_highres)

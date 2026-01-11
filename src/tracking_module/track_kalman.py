@@ -72,7 +72,8 @@ class Tracker:
             mask = source
             masked_temps = original_ira_img[mask.astype(bool)]
             avg_temp = masked_temps.mean()
-            if avg_temp < background_avg + 3:  # threshold to filter out noise
+            heatsource_size = np.sum(mask.astype(bool))
+            if avg_temp < background_avg + 3 or heatsource_size < 400:  # threshold to filter out noise
                 continue
             new_blob = KalmanBlob(mask=mask, masked_temps=masked_temps)
             self.blobs.append(new_blob)
@@ -106,7 +107,7 @@ if __name__ == "__main__":
     for idx in range(18230, 18260): #18115
         ira_highres = dataset.get_ira_highres(idx)
         thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
-        cleaned_mask = detector.get_connected_components(mask, min_size=100)
+        cleaned_mask = detector.get_connected_components(mask, min_size=200)
         tracker.update_blobs(cleaned_mask, ira_highres, detector.get_unmasked_mean(ira_highres, mask))
     
     # plot the blobs' centroids movements
