@@ -7,6 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from organizer_module.kalman_blob import KalmanBlob, mask_to_bbox
 from scipy.optimize import linear_sum_assignment
+from data_collection_module import utils
 
 
 class Tracker:
@@ -103,28 +104,53 @@ if __name__ == "__main__":
     detector = HeatSourceDetector()
     tracker = Tracker()
 
-    for idx in range(18230, 18260): #18115
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    IRA_height, IRA_width = dataset.get_ira_highres(0).shape
+    out = cv2.VideoWriter('kalman.mp4', fourcc, 30.0, (IRA_width, IRA_height))
+
+    for idx in range(17000, 18260): #18115
         ira_highres = dataset.get_ira_highres(idx)
         thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
         cleaned_mask = detector.get_connected_components(mask, min_size=100)
         tracker.update_blobs(cleaned_mask, ira_highres, detector.get_unmasked_mean(ira_highres, mask))
-    
-    # plot the blobs' centroids movements
 
-    for i, blob in enumerate(tracker.blobs):
-        centroids = blob.kalman_centroid_history
-        xs = [c[0] for c in centroids]
-        ys = [c[1] for c in centroids]
-        plt.plot(xs, ys, marker='o', label=f'Blob {i}')
+        ira_color = utils.colorize_thermal_map(ira_highres)
+        for i, blob in enumerate(tracker.blobs):
+            if len(blob.kalman_centroid_history) == 0:
+                continue
+            cX, cY = blob.kalman_centroid_history[-1]
+            cv2.putText(ira_color, str(i), (int(cX), int(cY)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+        out.write(ira_color)
+    out.release()
+
+    
+    # # plot the blobs' centroids movements
+
+    # # for i, blob in enumerate(tracker.blobs):
+    # #     centroids = blob.kalman_centroid_history
+    # #     xs = [c[0] for c in centroids]
+    # #     ys = [c[1] for c in centroids]
+    # #     plt.plot(xs, ys, marker='o', label=f'Blob {i}')
         
-    plt.gca().invert_yaxis()  # invert y axis to match image coordinates
-    plt.title("Blob Centroid Movements")
-    plt.xlim(0, ira_highres.shape[1])
-    plt.ylim(0, ira_highres.shape[0])
-    plt.xlabel("X")
-    plt.ylabel("Y")
-    plt.legend()
-    plt.show()
+    # # plot the blobs' kalman centroid in original IRA images 
+    # # the centroids are signified as the index of the blob
+    # # save them in a video kalman.mp4
+    # fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    # IRA_height, IRA_width = ira_highres.shape
+    # out = cv2.VideoWriter('kalman.mp4', fourcc, 10.0, (IRA_width, IRA_height))
+    # for idx in range(18000, 18260):
+    #     ira_highres = dataset.get_ira_highres(18260)
+    #     # convert ira to color image for better visualization
+    #     ira_color = utils.colorize_thermal_map(ira_highres)
+
+    #     for i, blob in enumerate(tracker.blobs):
+    #         cX, cY = blob.kalman_centroid_history[idx-18000]
+    #         cv2.putText(ira_color, str(i), (int(cX), int(cY)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+    #     plt.imshow(ira_color)
+    #     plt.show()
+    #     out.write(ira_color)
+    # out.release()
+
     
     
         
