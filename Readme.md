@@ -14,3 +14,9 @@
    2. `const char* udpAddress = "192.168.11.61";`
 3. connect to JH300
 4. `python ./presence_detection_workspace/src/data_collection_module/PC_receiver_new.py`
+
+
+
+
+# TODO
+TODO: add experiment where we carry a bottle of hot water

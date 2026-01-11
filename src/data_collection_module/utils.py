@@ -271,12 +271,14 @@ def load_npy_as_img(npy_path):
     npy_data = cv2.applyColorMap(npy_data, cv2.COLORMAP_JET)
     return npy_data
 
-def load_pkl_as_img(pkl_path):
+# idx = 0: mlx (low res)
+# idx = -1: m08 (high res)
+def load_pkl_as_img(pkl_path, idx = -1):
     with open(pkl_path, 'rb') as f:
         pkl_data = pickle.load(f)[-1]
     # print(pkl_data)
     if "ira_temp" in pkl_data:
-        pkl_data = pkl_data["ira_temp"][-1]
+        pkl_data = pkl_data["ira_temp"][idx]
     elif "tof_depth" in pkl_data:
         pkl_data = pkl_data['tof_depth'][:, :, 0]
     pkl_data = pkl_data.astype(np.uint8)
@@ -284,6 +286,12 @@ def load_pkl_as_img(pkl_path):
     pkl_data = cv2.resize(pkl_data, (320, 240), interpolation=cv2.INTER_NEAREST)
     pkl_data = cv2.applyColorMap(pkl_data, cv2.COLORMAP_JET)
     return pkl_data
+
+def load_yaml_as_dict(yaml_path):
+    import yaml
+    with open(yaml_path, 'r') as f:
+        yaml_data = yaml.safe_load(f)
+    return yaml_data
 
 if __name__ == "__main__":
     '''

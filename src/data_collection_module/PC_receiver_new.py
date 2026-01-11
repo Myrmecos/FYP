@@ -75,7 +75,7 @@ def ira_decode_results(packet_data):
 
 # class def
 class DataCollector():
-    def __init__(self, save_path="presence_detection_workspace/data", target_file="hall0"):
+    def __init__(self, save_path="presence_detection_workspace/data", target_file="hall1"):
         self.UDP_IP = "0.0.0.0"
         self.UDP_PORT = 6900
         self.BUFFER_SIZE = 1460 // 2 + 13  # 数据包的长度：数据部分加上5个字节的头部信息

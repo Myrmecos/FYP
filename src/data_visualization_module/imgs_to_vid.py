@@ -1,6 +1,7 @@
 # TODO: given a directory of images, convert them to a video file
 # the top left of the image should have the index
 # usage: python imgs_to_vid.py <img_dir> <output_vid_path> <fps>
+# example: python presence_detection_workspace/src/data_visualization_module/imgs_to_vid.py /Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall0 /Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall0/video/video.mp4 30
 import cv2
 import os
 import sys
@@ -46,10 +47,10 @@ def imgs_to_vid(data_dir, output_vid_path, fps=10):
 
     # the frame size should contain the four images side by side
     first_img = cv2.imread(first_img_path)
-    first_ira = utils.load_pkl_as_img(first_ira_path)
-    # first_ira_highres = utils.load_pkl_as_img(first_ira_highres_path)
+    first_ira = utils.load_pkl_as_img(first_ira_path, 0)
+    first_ira_highres = utils.load_pkl_as_img(first_ira_path, -1)
     first_tof = utils.load_pkl_as_img(first_tof_path)
-    stitched_frame = stitch_images([first_img, first_ira, first_tof])
+    stitched_frame = stitch_images([first_img, first_ira, first_ira_highres, first_tof])
     height, width, layers = stitched_frame.shape
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     video = cv2.VideoWriter(output_vid_path, fourcc, fps, (width, height))
@@ -62,10 +63,10 @@ def imgs_to_vid(data_dir, output_vid_path, fps=10):
         tof_path = os.path.join(tof_dir, tof_files[index])
 
         image = cv2.imread(img_path)
-        ira_img = utils.load_pkl_as_img(ira_path)
-        # ira_highres_img = utils.load_pkl_as_img(ira_highres_path)
+        ira_img = utils.load_pkl_as_img(ira_path, 0)
+        ira_highres_img = utils.load_pkl_as_img(ira_path, -1)
         tof_img = utils.load_pkl_as_img(tof_path)
-        frame = stitch_images([image, ira_img, tof_img])
+        frame = stitch_images([image, ira_img, ira_highres_img, tof_img])
         # add index to top left corner
         cv2.putText(frame, str(cnt), (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         cnt += 1
