@@ -3,9 +3,10 @@ import numpy as np
 from filterpy.kalman import KalmanFilter
 from . import convert
 
-import numpy as np
-from filterpy.kalman import KalmanFilter
-from . import convert
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from organizer_module.blob import Blob
 
 
 class KalmanBoxTracker(object):

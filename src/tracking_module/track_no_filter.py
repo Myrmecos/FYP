@@ -91,7 +91,7 @@ if __name__ == "__main__":
     detector = HeatSourceDetector()
     tracker = Tracker()
 
-    for idx in range(17000, 18115): #18115
+    for idx in range(18000, 18315): #18115
         ira_highres = dataset.get_ira_highres(idx)
         thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
         cleaned_mask = detector.get_connected_components(mask, min_size=100)
