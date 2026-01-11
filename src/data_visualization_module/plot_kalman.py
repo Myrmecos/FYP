@@ -24,7 +24,7 @@ if __name__ == "__main__":
     IRA_height, IRA_width = dataset.get_ira_highres(0).shape
     out = cv2.VideoWriter('kalman.mp4', fourcc, 30.0, (IRA_width, IRA_height))
 
-    for idx in range(17000, 18260): #18115
+    for idx in range(18260, 19260): #18115
         ira_highres = dataset.get_ira_highres(idx)
         thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
         cleaned_mask = detector.get_connected_components(mask, min_size=10)
