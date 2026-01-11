@@ -1,3 +1,8 @@
+# cortesy: https://github.com/mhnasseri/sort_oh/blob/main/libs/kalman_tracker.py
+import numpy as np
+from filterpy.kalman import KalmanFilter
+from . import convert
+
 import numpy as np
 from filterpy.kalman import KalmanFilter
 from . import convert
@@ -5,46 +10,41 @@ from . import convert
 
 class KalmanBoxTracker(object):
     """
-  This class represents the internel state of individual tracked objects observed as centroid points
+  This class represents the internel state of individual tracked objects observed as bbox.
   """
     count = 0
 
-    def __init__(self, initial_centroid, init_velocity=None):
+    def __init__(self, bbox, init_mode, bbox_before):
         """
     Initialises a tracker using initial bounding box.
     """
         # define constant velocity model
-        # (x, y, x_dot, y_dot) -> (x,y): location center, (x_dot, y_dot): velocity
+        # (u, v, s, r, u_dot, v_dot, s_dot) -> (u,v): location center, s: area, r: aspect ratio
         self.kf = KalmanFilter(dim_x=7, dim_z=4)
         self.kf.F = np.array(
-            [[1, 0, 1, 0], 
-             [0, 1, 0, 1], 
-             [0, 0, 1, 0],
-             [0, 0, 0, 1]])
+            [[1, 0, 0, 0, 1, 0, 0], [0, 1, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 0, 1], [0, 0, 0, 1, 0, 0, 0],
+             [0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 1]])
         self.kf.H = np.array(
-            [[1, 0, 0, 0,], 
-             [0, 1, 0, 0]])
-        
-        self.kf.x[:2] = np.array(initial_centroid).reshape(2, 1)
-        if init_velocity is not None: 
-            self.kf.x[2:4] = np.array(init_velocity).reshape(2, 1)
+            [[1, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0]])
 
-        self.kf.R[2:, 2:] *= 1.   # 10.
-        self.kf.P[4:, 4:] *= 10.  # 1000. # give high uncertainty to the unobservable initial velocities
-        self.kf.P *= 10.
-        self.kf.Q[-1, -1] *= 0.01
-        self.kf.Q[4:, 4:] *= 0.01
-        self.kf.x[:4] = convert.bbox_to_z(bbox)
+        if init_mode == 0:
+            self.kf.R[2:, 2:] *= 1.   # 10.
+            self.kf.P[4:, 4:] *= 10.  # 1000. # give high uncertainty to the unobservable initial velocities
+            self.kf.P *= 10.
+            self.kf.Q[-1, -1] *= 0.01
+            self.kf.Q[4:, 4:] *= 0.01
+            self.kf.x[:4] = convert.bbox_to_z(bbox)
 
-        self.kf.R[2:, 2:] *= 1.
-        self.kf.P[4:, 4:] *= 10.  # give high uncertainty to the unobservable initial velocities
-        # self.kf.P *= 10.
-        self.kf.Q[-1, -1] *= 0.01
-        self.kf.Q[4:, 4:] *= 0.01
-        state_before = convert.bbox_to_z(bbox_before)
-        state = convert.bbox_to_z(bbox)
-        self.kf.x[:4] = state
-        self.kf.x[4:] = state[0:3] - state_before[0:3]
+        elif init_mode == 1:
+            self.kf.R[2:, 2:] *= 1.
+            self.kf.P[4:, 4:] *= 10.  # give high uncertainty to the unobservable initial velocities
+            # self.kf.P *= 10.
+            self.kf.Q[-1, -1] *= 0.01
+            self.kf.Q[4:, 4:] *= 0.01
+            state_before = convert.bbox_to_z(bbox_before)
+            state = convert.bbox_to_z(bbox)
+            self.kf.x[:4] = state
+            self.kf.x[4:] = state[0:3] - state_before[0:3]
 
         self.time_since_update = 0
         self.id = KalmanBoxTracker.count

@@ -15,8 +15,26 @@
 3. connect to JH300
 4. `python ./presence_detection_workspace/src/data_collection_module/PC_receiver_new.py`
 
+# Heatsource detection
+1. Otsu's method: maximizing inter-group difference between foreground and background
+2. cleaning: get connected components, remove components with small area
 
+# Tracking
+1. for every blob, try to find match in detected heat regions (consider max-flow, min-cut problem)
+2. for new hot regions with no match to previous, if it is hot enough (larger than bg by 3), create a new blob
+3. TODO: use particle filter to track and predict human motion.
 
+# Motion detection
+4. TODO: classify postures (features + SVM)
+   1. can experiment with different models
 
 # TODO
 TODO: add experiment where we carry a bottle of hot water
+TODO: benchmark inference speed
+
+# Goal: 
+0. A window, first select where bed is, then start inferencing
+1. when human present, track him with a cross
+   1. when covered by blanket, mark blanket
+2. when human ready to stand up, issue warning
+3. when human leaves, do not mark residual

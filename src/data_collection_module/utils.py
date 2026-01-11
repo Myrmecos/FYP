@@ -287,6 +287,12 @@ def load_pkl_as_img(pkl_path, idx = -1):
     pkl_data = cv2.applyColorMap(pkl_data, cv2.COLORMAP_JET)
     return pkl_data
 
+def colorize_thermal_map(thermal_map):
+    thermal_map = thermal_map.astype(np.uint8)
+    thermal_map = cv2.normalize(thermal_map, None, 0, 255, cv2.NORM_MINMAX)
+    thermal_map = cv2.applyColorMap(thermal_map, cv2.COLORMAP_JET)
+    return thermal_map
+
 def load_yaml_as_dict(yaml_path):
     import yaml
     with open(yaml_path, 'r') as f:

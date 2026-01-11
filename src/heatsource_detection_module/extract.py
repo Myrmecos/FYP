@@ -48,6 +48,50 @@ class HeatSourceDetector:
         masked_values = self.get_masked_values(ira_img, mask)
         mean_val = np.mean(masked_values)
         return mean_val
+    
+    def get_unmasked_mean(self, ira_img, mask):
+        unmasked_values = ira_img[~mask.astype(bool)]
+        mean_val = np.mean(unmasked_values)
+        return mean_val
+    
+    def remove_small_regions(self, mask, min_size=50):
+        # remove small connected components in the binary mask
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask.astype('uint8'), connectivity=8)
+        cleaned_mask = np.zeros_like(mask)
+        for i in range(1, num_labels):  # skip background
+            if stats[i, cv2.CC_STAT_AREA] >= min_size:
+                cleaned_mask[labels == i] = 1
+        return cleaned_mask
+    
+    def get_connected_components(self, mask, clean=True, min_size=50):
+        if clean:
+            mask = self.remove_small_regions(mask, min_size)
+        # return list of connected component masks
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask.astype('uint8'), connectivity=8)
+        component_masks = []
+        for i in range(1, num_labels):  # skip background
+            component_mask = np.zeros_like(mask)
+            component_mask[labels == i] = 1
+            component_masks.append(component_mask)
+        return component_masks
+
+    def get_centroid(self, mask):
+        # compute centroid of the binary mask
+        moments = cv2.moments(mask.astype('uint8'))
+        if moments["m00"] != 0:
+            cX = int(moments["m10"] / moments["m00"])
+            cY = int(moments["m01"] / moments["m00"])
+        else:
+            cX, cY = -1, -1  # no centroid found
+        return (cX, cY)
+    
+    def get_centroid_per_blob(self, mask):
+        # compute centroids of all connected components in the binary mask
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask.astype('uint8'), connectivity=8)
+        centroid_list = []
+        for i in range(1, num_labels):  # skip background
+            centroid_list.append((int(centroids[i][0]), int(centroids[i][1])))
+        return centroid_list
 
 
 if __name__ == "__main__":

@@ -37,7 +37,7 @@ class DataVisualizer:
         for idx in range(len(dataset)):
             ira_highres = dataset.get_ira_highres(idx)
             thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
-            means.append(mean_val)
+            means.append(thresh)
         return means
     
     def _get_feature_highres(self, dataset, feature='median'):
@@ -64,39 +64,66 @@ class DataVisualizer:
         means = self._get_feature_highres(dataset, "mean")
         medians = self._get_feature_highres(dataset, "median")
         thresholds = self._get_feature_highres(dataset, "threshold")
-        plt.plot(means)
-        plt.plot(medians)
-        plt.plot(thresholds)
+        plt.plot(means, label="Mean")
+        plt.plot(medians, label="Median")
+        plt.plot(thresholds, label="Threshold")
         plt.title("Mean, median, threshold of IRA High-Res over Time")
         plt.xlabel("Frame Index")
         plt.ylabel("Mean IRA High-Res Value")
         # add legend
-        plt.legend(["Mean", "Median", "Threshold"])
+        plt.legend()
     
-    def plot_presence_segments(self, yaml_path):
-        presence_segments = self.construct_presence_segemnts(yaml_path)
-        plt.figure()
-        for start, end in presence_segments:
-            plt.axvspan(start, end, color='red', alpha=0.3)
-        plt.title("Presence Segments")
-        plt.xlabel("Frame Index")
-        plt.ylabel("Presence")
-        plt.yticks([0, 1], ['Absent', 'Present'])
+    def plot_occlusion_segments(self, yaml_path, new_figure=True):
+        occlusion_segments = self.construct_occlusion_segments(yaml_path)
+        if new_figure:
+            plt.figure()
+        for i, (start, end) in enumerate(occlusion_segments):
+            # Only label the first segment to avoid duplicate legend entries
+            label = "Occlusion Segment" if i == 0 else None
+            plt.axvspan(start, end, color='red', alpha=0.1, label=label)
+        if new_figure:
+            plt.title("Occluded Segments")
+            plt.xlabel("Frame Index")
+            plt.ylabel("Presence")
+            plt.yticks([0, 1], ['Clear', 'Occluded'])
     
-    def construct_presence_segemnts(self, yaml_path):
+    def plot_presence_segments(self, yaml_path, new_figure=True):
+        presence_segments = self.construct_presence_segments(yaml_path)
+        if new_figure:
+            plt.figure()
+        for i, (start, end) in enumerate(presence_segments):
+            # Only label the first segment to avoid duplicate legend entries
+            label = "Presence Segment" if i == 0 else None
+            plt.axvspan(start, end, color='red', alpha=0.1, label=label)
+        if new_figure:
+            plt.title("Presence Segments")
+            plt.xlabel("Frame Index")
+            plt.ylabel("Presence")
+            plt.yticks([0, 1], ['Absent', 'Present'])
+    
+    def construct_occlusion_segments(self, yaml_path):
         info = utils.load_yaml_as_dict(yaml_path)
         occlusion_starts = info['occlusion_start']
         occlusion_ends = info['occlusion_end']
-        presence_segments = []
+        occlusion_segments = []
         for start, end in zip(occlusion_starts, occlusion_ends):
-            presence_segments.append((start, end))
-        return presence_segments
+            occlusion_segments.append((start, end))
+        return occlusion_segments
 
+    def construct_presence_segments(self, yaml_path):
+        info = utils.load_yaml_as_dict(yaml_path)
+        entries = info['entries']
+        exits = info['exits']
+        presence_segments = []
+        for entry, exit in zip(entries, exits):
+            presence_segments.append((entry, exit))
+        return presence_segments
 
 if __name__ == "__main__":
     dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall0")
     detector = HeatSourceDetector()
     visualizer = DataVisualizer()
-    visualizer.plot_presence_segments("presence_detection_workspace/data/hall0/annotation.yaml")
     visualizer.plot_features_highres_over_time(dataset)
+    visualizer.plot_presence_segments("presence_detection_workspace/data/hall0/annotation.yaml", new_figure=False)
+    visualizer.plot_occlusion_segments("presence_detection_workspace/data/hall0/annotation.yaml", new_figure=False)
     plt.show()
