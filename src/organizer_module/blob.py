@@ -8,8 +8,8 @@ class Blob:
         self.masked_temps = masked_temps # the thermal image with mask applied
         self.mean_temp = mean_temp
         self.centroid = centroid
-        self.temp_history = []
-        self.centroid_history = []
+        self.temp_history = [] # if temp is decreasing, is heat residual, not human
+        self.centroid_history = [] # if move is directional (in some segments), likely human
 
     def update(self, mask, masked_temps):
         self.mask = mask
