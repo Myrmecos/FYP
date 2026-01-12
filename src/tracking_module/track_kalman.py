@@ -27,6 +27,10 @@ class Tracker:
         score_matrix = np.zeros((num_existing, num_detected))
         img_h, img_w = frame_shape
         diag = np.sqrt(img_w ** 2 + img_h ** 2)
+        neglect_residual = False
+
+        if num_existing > num_detected:
+            neglect_residual = True
 
         for i, blob in enumerate(self.blobs):
             predicted_bbox = blob.predict()
@@ -37,6 +41,8 @@ class Tracker:
                 det_cx = (new_bbox[0] + new_bbox[2]) / 2.0
                 det_cy = (new_bbox[1] + new_bbox[3]) / 2.0
                 iou = self._compute_iou(predicted_bbox, new_bbox)
+                if neglect_residual and blob.id==-1: #neglect residual and is residual
+                    iou *= 0.8  # soft ignore residual blobs
                 # normalized center distance in [0, 1]
                 dist = np.sqrt((pred_cx - det_cx) ** 2 + (pred_cy - det_cy) ** 2) / diag
                 # score balances IoU with proximity (higher is better)
@@ -55,7 +61,7 @@ class Tracker:
         return matched_pairs
 
     
-    def update_blobs(self, detected_heat_sources, original_ira_img, background_avg):
+    def update_blobs(self, detected_heat_sources, original_ira_img, background_avg, idx = -1):
         # we use simple IoU based tracking
         # the intersection over union (IoU) between existing blobs and detected heat sources
         # detected_heat_sources: a list of (mask) of detected heat sources [mask0, mask1, ...]
@@ -66,16 +72,18 @@ class Tracker:
         num_existing = len(self.blobs)
         num_detected = len(detected_heat_sources)
 
+        # =========== A. Match and update existing blobs ===========
         for r, c in matched_pairs:
             blob = self.blobs[r]
             mask = detected_heat_sources[c]
             masked_temps = original_ira_img[mask.astype(bool)]
             blob.update(mask, masked_temps, True)
 
+        # ========== B. Handle unmatched blobs and new detections ===========
         unmatched_existing_blobs_indices = set(range(num_existing)) - set([r for r, c in matched_pairs])
         unmatched_new_heat_sources_indices = set(range(num_detected)) - set([c for r, c in matched_pairs])
 
-        # check for new heat sources that do not match existing blobs
+        # B1. check for new heat sources that do not match existing blobs
         for source_idx in unmatched_new_heat_sources_indices:
             source = detected_heat_sources[source_idx]
             mask = source
@@ -94,6 +102,7 @@ class Tracker:
             residual_index = self.residual_detector.get_residual_index(self.blobs, new_blob)
             print("residual index: ", residual_index)
             if residual_index is not None:
+                print("Human left the bed! Residual heat detected. Frame index: ", idx)
                 if residual_index == -1:
                     new_blob.is_residual = True
                     new_blob.id = -1  # mark as residual blob
@@ -103,10 +112,17 @@ class Tracker:
                     self.blobs[residual_index].id = -1  # mark as residual blob
 
             self.blobs.append(new_blob)
-        
+
+        # B2. Update unmatched existing blobs as unobserved
         for blob_idx in unmatched_existing_blobs_indices:
             blob = self.blobs[blob_idx]
             blob.update(blob.get_mask(), blob.masked_temps, False)
+        
+        # remove blobs that are lost for too long or moved outside frame
+        for idx, blob in enumerate(self.blobs):
+            if blob.outside_frame(original_ira_img.shape) or blob.time_since_observed > blob.age / 2 or blob.time_since_observed > 50:
+                self.blobs.pop(idx)
+            
 
     def _compute_iou(self, bbox1, bbox2):
         # bbox: [x_min, y_min, x_max, y_max]

@@ -77,6 +77,7 @@ class KalmanBlob(object):
         if not isobserved:
             self.kf.x[6] /= 2
             self.kf.update(None)
+            self.time_since_observed += 1
         else:
             self.kf.update(convert.bbox_to_z(mask_to_bbox(mask)))
             self.time_since_observed = 0
@@ -122,3 +123,10 @@ class KalmanBlob(object):
             return -1
         self.mean_temp = self.masked_temps[self.masked_temps > 0].mean()
         return self.mean_temp
+
+    def outside_frame(self, frame_shape, margin = 3):
+        img_h, img_w = frame_shape
+        x_min, y_min, x_max, y_max = self.get_state()
+        if x_max < -margin or y_max < -margin or x_min > img_w + margin or y_min > img_h + margin:
+            return True
+        return False
