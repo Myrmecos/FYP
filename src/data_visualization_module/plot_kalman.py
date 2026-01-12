@@ -25,11 +25,14 @@ if __name__ == "__main__":
     IRA_height, IRA_width = dataset.get_ira_highres(0).shape
     out = cv2.VideoWriter('kalman.mp4', fourcc, 30.0, (IRA_width*5, IRA_height*5))
 
+    detection_result = []
+
     for idx in range(0, 10530): #18115
         ira_highres = dataset.get_ira_highres(idx)
         thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
         cleaned_mask = detector.get_connected_components(mask, min_size=10)
-        tracker.update_blobs(cleaned_mask, ira_highres, detector.get_unmasked_mean(ira_highres, mask), idx)
+
+        detection_result.append(tracker.update_blobs(cleaned_mask, ira_highres, detector.get_unmasked_mean(ira_highres, mask), idx))
 
         ira_color = utils.colorize_thermal_map(ira_highres)
         ira_color = cv2.resize(ira_color, (IRA_width*5, IRA_height*5), interpolation=cv2.INTER_NEAREST)
@@ -41,7 +44,11 @@ if __name__ == "__main__":
         out.write(ira_color)
     out.release()
 
-    
+    # write detection_result to a pkl file
+    import pickle as pkl
+    with open("kalman_detection_result.pkl", "wb") as f:
+        pkl.dump(detection_result, f)
+
     # # plot the blobs' centroids movements
 
     # # for i, blob in enumerate(tracker.blobs):

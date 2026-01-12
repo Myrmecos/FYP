@@ -62,6 +62,7 @@ class Tracker:
 
     
     def update_blobs(self, detected_heat_sources, original_ira_img, background_avg, idx = -1):
+        return_dict = {"human_in_scene": False, "bed_exit": False, "Frame index": idx}
         # we use simple IoU based tracking
         # the intersection over union (IoU) between existing blobs and detected heat sources
         # detected_heat_sources: a list of (mask) of detected heat sources [mask0, mask1, ...]
@@ -103,6 +104,7 @@ class Tracker:
             print("residual index: ", residual_index)
             if residual_index is not None:
                 print("Human left the bed! Residual heat detected. Frame index: ", idx)
+                return_dict["bed_exit"] = True
                 if residual_index == -1:
                     new_blob.is_residual = True
                     new_blob.id = -1  # mark as residual blob
@@ -120,8 +122,11 @@ class Tracker:
         
         # remove blobs that are lost for too long or moved outside frame
         for idx, blob in enumerate(self.blobs):
+            if blob.id != -1:
+                return_dict["human_in_scene"] = True
             if blob.outside_frame(original_ira_img.shape) or blob.time_since_observed > blob.age / 2 or blob.time_since_observed > 50:
                 self.blobs.pop(idx)
+        return return_dict
             
 
     def _compute_iou(self, bbox1, bbox2):
