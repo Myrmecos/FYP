@@ -10,6 +10,7 @@ from scipy.optimize import linear_sum_assignment
 from data_collection_module import utils
 
 
+
 from tracking_module.track_kalman import Tracker
 
 # use data from hall1, frame 18055-18115 for testing
@@ -24,7 +25,7 @@ if __name__ == "__main__":
     IRA_height, IRA_width = dataset.get_ira_highres(0).shape
     out = cv2.VideoWriter('kalman.mp4', fourcc, 30.0, (IRA_width, IRA_height))
 
-    for idx in range(0, 19260): #18115
+    for idx in range(10505, 10530): #18115
         ira_highres = dataset.get_ira_highres(idx)
         thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
         cleaned_mask = detector.get_connected_components(mask, min_size=10)
@@ -35,7 +36,7 @@ if __name__ == "__main__":
             if len(blob.kalman_centroid_history) == 0:
                 continue
             cX, cY = blob.kalman_centroid_history[-1]
-            cv2.putText(ira_color, str(i), (int(cX), int(cY)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+            cv2.putText(ira_color, str(blob.id), (int(cX), int(cY)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
         out.write(ira_color)
     out.release()
 

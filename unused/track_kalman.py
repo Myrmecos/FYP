@@ -7,11 +7,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from organizer_module.kalman_blob import KalmanBlob, mask_to_bbox
 from scipy.optimize import linear_sum_assignment
+from residual_heat_detection_module.residual_detect import ResidualHeatDetector
 
 
 class Tracker:
     def __init__(self):
         self.blobs = []  # list of KalmanBlob objects
+        self.residual_detector = ResidualHeatDetector()
     
     # move Hungarian algorithm out to here
     def _associate_blobs(self, detected_heat_sources, frame_shape):
@@ -22,6 +24,8 @@ class Tracker:
         """
         num_existing = len(self.blobs)
         num_detected = len(detected_heat_sources)
+        # if num_existing > num_detected:
+        #     neglect_residual = True
         score_matrix = np.zeros((num_existing, num_detected))
         img_h, img_w = frame_shape
         diag = np.sqrt(img_w ** 2 + img_h ** 2)
@@ -74,6 +78,7 @@ class Tracker:
         unmatched_new_heat_sources_indices = set(range(num_detected)) - set([c for r, c in matched_pairs])
 
         # check for new heat sources that do not match existing blobs
+        # Generate new blobs for unmatched detections
         for source_idx in unmatched_new_heat_sources_indices:
             source = detected_heat_sources[source_idx]
             mask = source
@@ -83,11 +88,25 @@ class Tracker:
             if avg_temp < background_avg + 3 or heatsource_size < 400:  # threshold to filter out noise
                 continue
             new_blob = KalmanBlob(mask=mask, masked_temps=masked_temps)
+            print("DEBUG: generated new blob")
+            # check if residual is generated
+            residual_index = self.residual_detector.get_residual_index(self.blobs, new_blob)
+            print("residual index: ", residual_index)
+            if residual_index is not None:
+                if residual_index == -1:
+                    new_blob.is_residual = True
+                    new_blob.id = -1  # mark as residual blob
+                else:
+                    self.blobs[residual_index].is_residual = True
+                    self.blobs[residual_index].id = -1  # mark as residual blob
+            
             self.blobs.append(new_blob)
         
+        # Update unmatched existing blobs as unobserved
         for blob_idx in unmatched_existing_blobs_indices:
             blob = self.blobs[blob_idx]
             blob.update(blob.get_mask(), blob.masked_temps, False)
+
 
     def _compute_iou(self, bbox1, bbox2):
         # bbox: [x_min, y_min, x_max, y_max]

@@ -6,12 +6,14 @@ import numpy as np
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from organizer_module.kalman_blob import KalmanBlob, mask_to_bbox
+from residual_heat_detection_module.residual_detect import ResidualHeatDetector
 from scipy.optimize import linear_sum_assignment
 
 
 class Tracker:
     def __init__(self):
         self.blobs = []  # list of KalmanBlob objects
+        self.residual_detector = ResidualHeatDetector()
     
     # move Hungarian algorithm out to here
     def _associate_blobs(self, detected_heat_sources, frame_shape):
@@ -80,9 +82,26 @@ class Tracker:
             masked_temps = original_ira_img[mask.astype(bool)]
             avg_temp = masked_temps.mean()
             heatsource_size = np.sum(mask.astype(bool))
+            # =========== Case 1: Noise or insignificant heat source ===========
             if avg_temp < background_avg + 3 or heatsource_size < 400:  # threshold to filter out noise
                 continue
+
+            # ============ Case 2: New blob detected ============
             new_blob = KalmanBlob(mask=mask, masked_temps=masked_temps)
+
+            # ======== check if residual is generated =========
+            print("mean temp of new blob: ", new_blob.mean_temp)
+            residual_index = self.residual_detector.get_residual_index(self.blobs, new_blob)
+            print("residual index: ", residual_index)
+            if residual_index is not None:
+                if residual_index == -1:
+                    new_blob.is_residual = True
+                    new_blob.id = -1  # mark as residual blob
+                else:
+                    self.blobs[residual_index].is_residual = True
+                    new_blob.id = self.blobs[residual_index].id
+                    self.blobs[residual_index].id = -1  # mark as residual blob
+
             self.blobs.append(new_blob)
         
         for blob_idx in unmatched_existing_blobs_indices:

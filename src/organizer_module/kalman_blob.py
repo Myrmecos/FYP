@@ -29,8 +29,9 @@ class KalmanBlob(object):
         self.id = KalmanBlob.id  # unique identifier for the blob
         KalmanBlob.id += 1
         self.mask = mask
+        self.prev_mask = None
         self.masked_temps = masked_temps # the thermal image with mask applied
-        self.mean_temp = mean_temp
+        self.mean_temp = self._compute_mean_temp()
         self.centroid = centroid
         self.temp_history = [] # if temp is decreasing, is heat residual, not human
         self.centroid_history = [] # if move is directional (in some segments), likely human
@@ -59,6 +60,7 @@ class KalmanBlob(object):
         
 
     def update(self, mask, masked_temps, isobserved):
+        self.prev_mask = self.mask
         self.mask = mask
         self.masked_temps = masked_temps
         self._compute_centroid()
@@ -118,4 +120,5 @@ class KalmanBlob(object):
     def _compute_mean_temp(self):
         if self.masked_temps.size == 0:
             return -1
-        self.mean_temp = self.masked_temps.mean()
+        self.mean_temp = self.masked_temps[self.masked_temps > 0].mean()
+        return self.mean_temp
