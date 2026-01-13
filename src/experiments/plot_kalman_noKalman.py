@@ -5,36 +5,29 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from organizer_module.kalman_blob import KalmanBlob, mask_to_bbox
+from kalman_blob_noKalman import KalmanBlob, mask_to_bbox
 from scipy.optimize import linear_sum_assignment
 from data_collection_module import utils
 
 
 
-from tracking_module.track_kalman import Tracker
-
-SRC_PATH = "/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall2"
-DEST_VID = "kalman2.mp4"
-DEST_PKL = "kalman_detection_result2.pkl"
+from track_kalman_noKalman import Tracker
 
 # use data from hall1, frame 18055-18115 for testing
 if __name__ == "__main__":
     from dataset import ThermalDataset
     from heatsource_detection_module.extract import HeatSourceDetector
-    dataset = ThermalDataset(SRC_PATH)
+    dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall1")
     detector = HeatSourceDetector()
     tracker = Tracker()
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     IRA_height, IRA_width = dataset.get_ira_highres(0).shape
-    out = cv2.VideoWriter(DEST_VID, fourcc, 30.0, (IRA_width*5, IRA_height*5))
+    out = cv2.VideoWriter('kalman_noKalman.mp4', fourcc, 30.0, (IRA_width*5, IRA_height*5))
 
     detection_result = []
 
-    # import time
-    # start_time = time.time()
-
-    for idx in range(300, len(dataset)-1): #18115
+    for idx in range(300, 20712): #18115
         ira_highres = dataset.get_ira_highres(idx)
         thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
         cleaned_mask = detector.get_connected_components(mask, min_size=10)
@@ -51,12 +44,9 @@ if __name__ == "__main__":
         out.write(ira_color)
     out.release()
 
-    # end_time = time.time()
-    # print(f"Inference speed: {(20712 - 300)/(end_time - start_time)} frames per second")
-
     # write detection_result to a pkl file
     import pickle as pkl
-    with open(DEST_PKL, "wb") as f:
+    with open("kalman_detection_result_noKalman.pkl", "wb") as f:
         pkl.dump(detection_result, f)
 
     # # plot the blobs' centroids movements

@@ -51,7 +51,7 @@ class Tracker:
         for r, c in zip(row_ind, col_ind):
             iou = score_matrix[r, c]  # note: score, not pure IoU
             # accept if IoU good, or centers close even when IoU collapsed
-            centers_close = score_matrix[r, c] >= 0.30  # blended metric threshold
+            centers_close = score_matrix[r, c] >= 0.3  # blended metric threshold
             if centers_close:
                 matched_pairs.append((r, c))
         return matched_pairs

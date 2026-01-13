@@ -29,7 +29,15 @@ class HeatSourceDetector:
         ira_blurred = cv2.GaussianBlur(ira_uint8, (5, 5), 0)
         
         thresh, mask = cv2.threshold(ira_blurred,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        self.erode_mask(mask)
+
         return thresh, mask
+    
+    def erode_mask(self, mask, kernel_size=3, iterations=1):
+        kernel = np.ones((kernel_size, kernel_size), np.uint8)
+        eroded_mask = cv2.erode(mask.astype('uint8'), kernel, iterations=iterations)
+        return eroded_mask
+    
     def get_masked_values(self, ira_img, mask):
         # apply mask to the image
         ira_flat = ira_img.flatten()

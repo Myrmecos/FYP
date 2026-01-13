@@ -120,10 +120,10 @@ class DataVisualizer:
         return presence_segments
 
 if __name__ == "__main__":
-    dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall0")
+    dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall1")
     detector = HeatSourceDetector()
     visualizer = DataVisualizer()
     visualizer.plot_features_highres_over_time(dataset)
-    visualizer.plot_presence_segments("presence_detection_workspace/data/hall0/annotation.yaml", new_figure=False)
-    visualizer.plot_occlusion_segments("presence_detection_workspace/data/hall0/annotation.yaml", new_figure=False)
+    visualizer.plot_presence_segments("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall1/annotation.yaml", new_figure=False)
+    visualizer.plot_occlusion_segments("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall1/annotation.yaml", new_figure=False)
     plt.show()

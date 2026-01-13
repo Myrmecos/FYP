@@ -10,7 +10,6 @@ from residual_heat_detection_module.residual_detect import ResidualHeatDetector
 from scipy.optimize import linear_sum_assignment
 
 HUNG_THRESH = 0.2  # minimum score for match acceptance
-SIZE_THRESH = 400  # minimum size of heat source to be considered a blob
 
 class Tracker:
     def __init__(self):
@@ -94,26 +93,26 @@ class Tracker:
             avg_temp = masked_temps.mean()
             heatsource_size = np.sum(mask.astype(bool))
             # =========== Case 1: Noise or insignificant heat source ===========
-            if avg_temp < background_avg + 3 or heatsource_size < SIZE_THRESH:  # threshold to filter out noise
+            if avg_temp < background_avg + 3 or heatsource_size < 400:  # threshold to filter out noise
                 continue
 
             # ============ Case 2: New blob detected ============
             new_blob = KalmanBlob(mask=mask, masked_temps=masked_temps)
 
             # ======== check if residual is generated =========
-            print("mean temp of new blob: ", new_blob.mean_temp)
-            residual_index = self.residual_detector.get_residual_index(self.blobs, new_blob)
-            print("residual index: ", residual_index)
-            if residual_index is not None:
-                print("Human left the bed! Residual heat detected. Frame index: ", idx)
-                return_dict["bed_exit"] = True
-                if residual_index == -1:
-                    new_blob.is_residual = True
-                    new_blob.id = -1  # mark as residual blob
-                else:
-                    self.blobs[residual_index].is_residual = True
-                    new_blob.id = self.blobs[residual_index].id
-                    self.blobs[residual_index].id = -1  # mark as residual blob
+            # print("mean temp of new blob: ", new_blob.mean_temp)
+            # residual_index = self.residual_detector.get_residual_index(self.blobs, new_blob)
+            # print("residual index: ", residual_index)
+            # if residual_index is not None:
+            #     print("Human left the bed! Residual heat detected. Frame index: ", idx)
+            #     return_dict["bed_exit"] = True
+            #     if residual_index == -1:
+            #         new_blob.is_residual = True
+            #         new_blob.id = -1  # mark as residual blob
+            #     else:
+            #         self.blobs[residual_index].is_residual = True
+            #         new_blob.id = self.blobs[residual_index].id
+            #         self.blobs[residual_index].id = -1  # mark as residual blob
 
             self.blobs.append(new_blob)
 

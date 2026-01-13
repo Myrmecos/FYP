@@ -293,6 +293,13 @@ def colorize_thermal_map(thermal_map):
     thermal_map = cv2.applyColorMap(thermal_map, cv2.COLORMAP_JET)
     return thermal_map
 
+def colorize_thermal_map_thres(thermal_map, min_val, max_val):
+    thermal_map = thermal_map.astype(np.float32)
+    thermal_map = np.clip(thermal_map, min_val, max_val)
+    thermal_map = ((thermal_map - min_val) / (max_val - min_val) * 255).astype(np.uint8)
+    thermal_map = cv2.applyColorMap(thermal_map, cv2.COLORMAP_JET)
+    return thermal_map
+
 def load_yaml_as_dict(yaml_path):
     import yaml
     with open(yaml_path, 'r') as f:
