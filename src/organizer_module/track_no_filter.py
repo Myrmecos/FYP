@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from organizer_module.blob import Blob
+from heat_patch_tracker_module.blob import Blob
 from scipy.optimize import linear_sum_assignment
 
 

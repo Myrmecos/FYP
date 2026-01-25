@@ -5,13 +5,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from organizer_module.kalman_blob import KalmanBlob, mask_to_bbox
+from heat_patch_tracker_module.kalman_blob import KalmanBlob, mask_to_bbox
 from scipy.optimize import linear_sum_assignment
 from data_collection_module import utils
 
 
 
-from tracking_module.track_kalman import Tracker
+from organizer_module.track_kalman import Tracker
 
 SRC_PATH = "/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall1"
 DEST_VID = "kalman_demo_clean.mp4"

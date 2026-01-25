@@ -38,3 +38,7 @@ TODO: benchmark inference speed
    1. when covered by blanket, mark blanket
 2. when human ready to stand up, issue warning
 3. when human leaves, do not mark residual
+
+# Update
+1. renamed organizer_module to heat_patch_tracker_module
+2. renamed tracking_module to organizer_module

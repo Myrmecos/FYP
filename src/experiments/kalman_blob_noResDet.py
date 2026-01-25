@@ -4,7 +4,7 @@ import numpy as np
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from organizer_module import convert
+from heat_patch_tracker_module import convert
 
 # remove residual detection functionality
 def mask_to_bbox(mask):

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from organizer_module.kalman_blob import KalmanBlob, mask_to_bbox
+from heat_patch_tracker_module.kalman_blob import KalmanBlob, mask_to_bbox
 from residual_heat_detection_module.residual_detect import ResidualHeatDetector
 from scipy.optimize import linear_sum_assignment
 
