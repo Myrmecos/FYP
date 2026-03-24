@@ -3,3 +3,9 @@ src/data_collection_module/__pycache__/*
 */__pycache__/*
 *.mp4
 *.pkl
+segmentation/home2
+segmentation/lying
+segmentation/walking
+*.h5
+segmentation/unet_model.h5
+**/.DS_Store

@@ -42,3 +42,17 @@ TODO: benchmark inference speed
 # Update
 1. renamed organizer_module to heat_patch_tracker_module
 2. renamed tracking_module to organizer_module
+
+
+
+# Ideas and suggestions: 20260317
+1. bounding box or mask?
+   1. mask of low quality, should try bounding box first
+2. how to perform prediction?
+   1. instead of BBox, can use thermal heat patches' values as weight;
+   2. instead of Kalman filter, can use particle filter.
+3. how to collect data for ambient interference? how to remove their effect?
+4. do we need a husk for each device?* NOT IMPORTANT, DONT WASTE YOUR TIME HERE
+5. How do we process heat patches?
+   1. find literature support: use case is single-user.
+   2. how do we seperate thermal interference and human as different patches?
