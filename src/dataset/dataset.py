@@ -6,7 +6,12 @@ from pathlib import Path
 
 import cv2
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from data_collection_module import utils
+import yaml
+
+def load_yaml(yaml_path):
+    with open(yaml_path, 'r') as f:
+        yaml_data = yaml.safe_load(f)
+    return yaml_data
 
 class ThermalDatasetAggregator():
     """A class to aggregate the dataset and provide easy access to the data.
@@ -90,7 +95,7 @@ class ThermalDataset():
         self.tof_files = sorted([f for f in os.listdir(self.tof_dir) if f.endswith('.pkl')])
         self.annotations_expanded = [-1 for _ in range(self.__len__())]  # type: List[int]
         self.process_annotations()
-        
+
     def process_annotations(self):
         """annotation format: 
             valid_frame_indices: [[10, 1800]] # ranges of valid frames for this dataset, can be multiple ranges for one dataset
@@ -112,29 +117,34 @@ class ThermalDataset():
         if not os.path.exists(self.annotation_path):
             print(f"Warning: annotation file {self.annotation_path} does not exist. All frames will be labeled as -1 (unknown).")
             return
-        self.annotations = utils.load_yaml(self.annotation_path)
-        for entry in self.annotations["valid_frame_indices"]:
-            for i in range(entry[0], entry[1]+1):
-                self.annotations_expanded[i] = 0
-        for entry in self.annotations["presence"]:
-            for i in range(entry[0], entry[1]+1):
-                self.annotations_expanded[i] = 1
-        for entry in self.annotations["standing"]:
-            for i in range(entry[0], entry[1]+1):
-                self.annotations_expanded[i] = 2
-        for entry in self.annotations["sitting_by_bed"]:
-            for i in range(entry[0], entry[1]+1):
-                self.annotations_expanded[i] = 3
-        for entry in self.annotations["sitting_on_bed"]:
-            for i in range(entry[0], entry[1]+1):
-                self.annotations_expanded[i] = 4
-        for entry in self.annotations["lying_no_cover"]:
-            for i in range(entry[0], entry[1]+1):
-                self.annotations_expanded[i] = 5
-        for entry in self.annotations["lying_with_cover"]:
-            for i in range(entry[0], entry[1]+1):
-                self.annotations_expanded[i] = 6
-
+        self.annotations = load_yaml(self.annotation_path)
+        if len(self.annotations) == 0:
+            print(f"Warning: annotation file {self.annotation_path} is empty. All frames will be labeled as -1 (unknown).")
+            return
+        try:
+            for entry in self.annotations["valid_frame_indices"]:
+                for i in range(entry[0], entry[1]+1):
+                    self.annotations_expanded[i] = 0
+            for entry in self.annotations["presence"]:
+                for i in range(entry[0], entry[1]+1):
+                    self.annotations_expanded[i] = 1
+            for entry in self.annotations["standing"]:
+                for i in range(entry[0], entry[1]+1):
+                    self.annotations_expanded[i] = 2
+            for entry in self.annotations["sitting_by_bed"]:
+                for i in range(entry[0], entry[1]+1):
+                    self.annotations_expanded[i] = 3
+            for entry in self.annotations["sitting_on_bed"]:
+                for i in range(entry[0], entry[1]+1):
+                    self.annotations_expanded[i] = 4
+            for entry in self.annotations["lying_no_cover"]:
+                for i in range(entry[0], entry[1]+1):
+                    self.annotations_expanded[i] = 5
+            for entry in self.annotations["lying_with_cover"]:
+                for i in range(entry[0], entry[1]+1):
+                    self.annotations_expanded[i] = 6
+        except:
+            print("problems with annotation format. Please check the annotation.yaml file. All frames will be labeled as -1 (unknown).")
     def __len__(self):
         lngth = min(len(self.img_files), len(self.ira_files), len(self.tof_files))
         return len(self.img_files)
@@ -187,7 +197,7 @@ class ThermalDataset():
         # 4: sitting on bed; 
         # 5: lying w/o cover; 
         # 6: lying with cover
-        annotation = utils.load_yaml(self.annotation_path)
+        annotation = load_yaml(self.annotation_path)
         presence_label = annotation[index]['presence']
         return presence_label
     

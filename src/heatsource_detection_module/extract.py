@@ -4,7 +4,8 @@ import cv2
 import matplotlib.pyplot as plt
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from dataset import ThermalDataset
+from dataset.dataset import ThermalDataset, ThermalDatasetAggregator
+
 
 # TODO: implementa a class for detecting heat source
 # The scene can contain human
@@ -15,6 +16,21 @@ import numpy as np
 class HeatSourceDetector:
     def __init__(self):
         pass
+
+    # given an ira image, return a binary mask of the heat source
+    # utilize all methods in this class to find the best mask
+    def process_frame_mask(self, ira_img, min_size=10):
+        thresh, mask = self.get_thresh_mask_otsu_gaussian(ira_img)
+        eroded_mask = self.erode_mask(mask)
+        cleaned_mask = self.remove_small_regions(eroded_mask, min_size)
+        return cleaned_mask
+    
+    # given an ira image, return a list of binary masks of the heat source blobs
+    # utilize all methods in this class to find the best mask
+    def process_frame_connected_components(self, ira_img, min_size=400):
+        cleaned_mask = self.process_frame_mask(ira_img, min_size)
+        component_masks = self.get_connected_components(cleaned_mask, min_size=min_size)
+        return component_masks
 
     # returns threshold and a binary mask
     def get_thresh_mask_otsu(self, ira_img):
@@ -103,11 +119,85 @@ class HeatSourceDetector:
 
 
 if __name__ == "__main__":
-    dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall0")
-    idx = 510
-    ira_highres = dataset.get_ira_highres(idx)
-    detector = HeatSourceDetector()
-    thresh, mask = detector.get_thresh_mask_otsu_gaussian(ira_highres)
-    plt.imshow(mask)
-    plt.show()
-    print(thresh)
+    from tqdm import tqdm
+
+    def visualize():
+        from data_visualization_module.plot import DataVisualizer
+        visualizer = DataVisualizer()
+        dataset_base_dirs = [
+            "entry_exit_detection/presence_detection_workspace/data/office0_1",
+            "entry_exit_detection/presence_detection_workspace/data/office0_2"
+        ]
+        dataset = ThermalDatasetAggregator(dataset_base_dirs)
+        detector = HeatSourceDetector()
+
+
+        for i in range(1, dataset.subset_number()):
+            print(f"Dataset {i} length: {dataset.subset_len(i)}")
+            for j in range(648, 648+2600, 20):
+                img = dataset.get_image_ij(i, j)
+                ira = dataset.get_ira_ij(i, j)
+                ira_highres = dataset.get_ira_highres_ij(i, j)
+                tof = dataset.get_tof_ij(i, j)
+
+                # show the mask
+                # thresh, mask = detector.get_thresh_mask_otsu_gaussian(ira_highres)
+                mask = detector.process_frame_mask(ira_highres, min_size=100)
+                mask = mask.astype('uint8') * 255
+
+                color_thermal_mask = visualizer.compose_color_and_thermal(img, ira_highres, mask)
+                cv2.imshow("Color and Thermal", color_thermal_mask)
+                cv2.waitKey(0)
+
+    visualize()
+    
+    def visualize_to_vid():
+        # visualize data to an mp4 video
+        from data_visualization_module.plot import DataVisualizer
+        visualizer = DataVisualizer()
+        dataset_base_dirs = [
+            "entry_exit_detection/presence_detection_workspace/data/office0_1",
+            "entry_exit_detection/presence_detection_workspace/data/office0_2"
+        ]
+        dataset = ThermalDatasetAggregator(dataset_base_dirs)
+        detector = HeatSourceDetector()
+        
+        # get image shape
+        img = dataset.get_image_ij(0, 0)
+        ira = dataset.get_ira_ij(0, 0)
+        ira_highres = dataset.get_ira_highres_ij(0, 0)
+        tof = dataset.get_tof_ij(0, 0)
+        thresh, mask = detector.get_thresh_mask_otsu_gaussian(ira_highres)
+        color_thermal_mask = visualizer.compose_color_and_thermal(img, ira_highres, mask)
+        shape = color_thermal_mask.shape[1], color_thermal_mask.shape[0]  # width, height
+
+        # initialize output video writer
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+
+        out = cv2.VideoWriter('heat_source_detection.mp4', fourcc, 30, shape)  # adjust frame size as needed
+
+
+        for i in range(1, dataset.subset_number()):
+            print(f"Dataset {i} length: {dataset.subset_len(i)}")
+            idx = 0
+            for j in tqdm(range(dataset.subset_len(i))):
+                img = dataset.get_image_ij(i, j)
+                ira = dataset.get_ira_ij(i, j)
+                ira_highres = dataset.get_ira_highres_ij(i, j)
+                tof = dataset.get_tof_ij(i, j)
+
+                # show the mask
+                # thresh, mask = detector.get_thresh_mask_otsu_gaussian(ira_highres)
+                mask = detector.process_frame_mask(ira_highres, min_size=100)
+                mask = mask.astype('uint8') * 255 # after processing, mask is binary 0/1, convert to 0/255 for visualization
+
+                color_thermal_mask = visualizer.compose_color_and_thermal(img, ira_highres, mask)
+
+                # write idx on the frame
+                cv2.putText(color_thermal_mask, str(idx), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                out.write(color_thermal_mask)
+                idx += 1
+
+        out.release()
+
+    # visualize_to_vid()

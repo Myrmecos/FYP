@@ -10,7 +10,7 @@ from residual_heat_detection_module.residual_detect import ResidualHeatDetector
 from scipy.optimize import linear_sum_assignment
 
 HUNG_THRESH = 0.2  # minimum score for match acceptance
-SIZE_THRESH = 400  # minimum size of heat source to be considered a blob
+SIZE_THRESH = 200  # minimum size of heat source to be considered a blob
 
 class Tracker:
     def __init__(self):
@@ -85,15 +85,18 @@ class Tracker:
         # ========== B. Handle unmatched blobs and new detections ===========
         unmatched_existing_blobs_indices = set(range(num_existing)) - set([r for r, c in matched_pairs])
         unmatched_new_heat_sources_indices = set(range(num_detected)) - set([c for r, c in matched_pairs])
-
+        # print("DEBUG: unmatched:", unmatched_existing_blobs_indices, unmatched_new_heat_sources_indices)
+        
         # B1. check for new heat sources that do not match existing blobs
         for source_idx in unmatched_new_heat_sources_indices:
+            print("DEBUG: New heat source detected at index ", idx, " source index: ", source_idx)
             source = detected_heat_sources[source_idx]
             mask = source
             masked_temps = original_ira_img[mask.astype(bool)]
             avg_temp = masked_temps.mean()
             heatsource_size = np.sum(mask.astype(bool))
             # =========== Case 1: Noise or insignificant heat source ===========
+            # print("DEBUG:avg temp too low ", avg_temp < background_avg + 3, "; heatsource size too small ", heatsource_size < SIZE_THRESH)
             if avg_temp < background_avg + 3 or heatsource_size < SIZE_THRESH:  # threshold to filter out noise
                 continue
 
@@ -122,7 +125,7 @@ class Tracker:
             blob = self.blobs[blob_idx]
             blob.update(blob.get_mask(), blob.masked_temps, False)
         
-        # remove blobs that are lost for too long or moved outside frame
+        # B3. remove blobs that are lost for too long or moved outside frame
         for idx, blob in enumerate(self.blobs):
             if blob.id != -1:
                 return_dict["human_in_scene"] = True
@@ -147,35 +150,100 @@ class Tracker:
         
 # use data from hall1, frame 18055-18115 for testing
 if __name__ == "__main__":
-    from dataset import ThermalDataset
-    from heatsource_detection_module.extract import HeatSourceDetector
-    dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall1")
-    detector = HeatSourceDetector()
-    tracker = Tracker()
+    def plot_trajectory_on_img():
+        from dataset import ThermalDataset
+        from heatsource_detection_module.extract import HeatSourceDetector
+        from data_visualization_module.plot import DataVisualizer, stitch_images
+        datavisualizer = DataVisualizer()
+        dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall1")
+        detector = HeatSourceDetector()
+        tracker = Tracker()
 
-    for idx in range(18230, 18260): #18115
-        ira_highres = dataset.get_ira_highres(idx)
-        thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
-        cleaned_mask = detector.get_connected_components(mask, min_size=200)
-        tracker.update_blobs(cleaned_mask, ira_highres, detector.get_unmasked_mean(ira_highres, mask))
-    
-    # plot the blobs' centroids movements
+        for idx in range(18230, 18265): #18115
+            ira_highres = dataset.get_ira_highres(idx)
+            thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
+            mask_processed = detector.process_frame_mask(ira_highres, min_size=200)
+            mask_individual = detector.process_frame_connected_components(ira_highres, min_size=200)
+            # cleaned_mask = detector.get_connected_components(mask, min_size=200)
+            print(len(mask_individual), " heat sources detected in frame ", idx)
+            tracker.update_blobs(mask_individual, ira_highres, detector.get_unmasked_mean(ira_highres, mask))
 
-    for i, blob in enumerate(tracker.blobs):
-        centroids = blob.kalman_centroid_history
-        xs = [c[0] for c in centroids]
-        ys = [c[1] for c in centroids]
-        plt.plot(xs, ys, marker='o', label=f'Blob {i}')
+            ira_highres_color = datavisualizer._prepare_thermal_for_colormap(ira_highres)
+            ira_highres_color = cv2.applyColorMap(ira_highres_color, cv2.COLORMAP_JET)
+
+            map_color = datavisualizer._prepare_thermal_for_colormap(mask_processed.astype('uint8') * 255)
+            map_color = cv2.applyColorMap(map_color, cv2.COLORMAP_JET)
+
+            scaling_factor = 10
+            ira_highres_color = cv2.resize(ira_highres_color, (0, 0), fx=scaling_factor, fy=scaling_factor)
+            map_color = cv2.resize(map_color, (0, 0), fx=scaling_factor, fy=scaling_factor)
+
+            # plot the centroid of each blob on the IRA high-res image
+            for i, blob in enumerate(tracker.blobs):
+                if not blob.kalman_centroid_history:  # check if history is not empty
+                    continue
+                centroid = blob.kalman_centroid_history[-1]  # get the latest centroid
+                cv2.circle(ira_highres_color, (int(centroid[0] * scaling_factor), int(centroid[1] * scaling_factor)), 5, (0, 0, 0), -1)  # draw centroid on image with radiu 5
+                cv2.putText(ira_highres_color, f'Blob {i}', (int(centroid[0] * scaling_factor) + 5, int(centroid[1] * scaling_factor) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+                cv2.circle(map_color, (int(centroid[0] * scaling_factor), int(centroid[1] * scaling_factor)), 5, (0, 0, 0), -1)  # also plot on mask color map for better visibility
+                cv2.putText(map_color, f'Blob {i}', (int(centroid[0] * scaling_factor) + 5, int(centroid[1] * scaling_factor) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            # cv2.imshow("IRA High-Res with Blob Centroids", ira_highres_color)
+            # cv2.waitKey(0) 
+            # stich the original IRA high-res and the color map of detected blobs side by side for better visualization
+            print("number of blobs found: ", len(tracker.blobs))
+            combined_vis = stitch_images([ira_highres_color, map_color])
+            cv2.imshow("Combined Visualization", combined_vis)
+            cv2.waitKey(0)
+
         
-    plt.gca().invert_yaxis()  # invert y axis to match image coordinates
-    plt.title("Blob Centroid Movements")
-    plt.xlim(0, ira_highres.shape[1])
-    plt.ylim(0, ira_highres.shape[0])
-    plt.xlabel("X")
-    plt.ylabel("Y")
-    plt.legend()
-    plt.show()
-    
+        # # plot the blobs' centroids movements
+        # for i, blob in enumerate(tracker.blobs):
+        #     centroids = blob.kalman_centroid_history
+        #     xs = [c[0] for c in centroids]
+        #     ys = [c[1] for c in centroids]
+        #     plt.plot(xs, ys, marker='o', label=f'Blob {i}')
+            
+        # plt.gca().invert_yaxis()  # invert y axis to match image coordinates
+        # plt.title("Blob Centroid Movements")
+        # plt.xlim(0, ira_highres.shape[1])
+        # plt.ylim(0, ira_highres.shape[0])
+        # plt.xlabel("X")
+        # plt.ylabel("Y")
+        # plt.legend()
+        # plt.show()
+    plot_trajectory_on_img()
+
+    def plot_trajectory():
+        from dataset import ThermalDataset
+        from heatsource_detection_module.extract import HeatSourceDetector
+        dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall1")
+        detector = HeatSourceDetector()
+        tracker = Tracker()
+
+        rng = range(18240, 18260) #18115
+
+        for idx in rng: #18115
+            ira_highres = dataset.get_ira_highres(idx)
+            thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
+            cleaned_mask = detector.get_connected_components(mask, min_size=200)
+            tracker.update_blobs(cleaned_mask, ira_highres, detector.get_unmasked_mean(ira_highres, mask))
+        
+        # plot the blobs' centroids movements
+
+        for i, blob in enumerate(tracker.blobs):
+            centroids = blob.kalman_centroid_history
+            xs = [c[0] for c in centroids]
+            ys = [c[1] for c in centroids]
+            plt.plot(xs, ys, marker='o', label=f'Blob {i}')
+            
+        plt.gca().invert_yaxis()  # invert y axis to match image coordinates
+        plt.title("Blob Centroid Movements")
+        plt.xlim(0, ira_highres.shape[1])
+        plt.ylim(0, ira_highres.shape[0])
+        plt.xlabel("X")
+        plt.ylabel("Y")
+        plt.legend()
+        plt.show()
     
         
 
