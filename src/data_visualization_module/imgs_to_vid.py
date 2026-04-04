@@ -36,7 +36,7 @@ def imgs_to_vid(data_dir, output_vid_path, fps=10):
 
     img_dir = os.path.join(data_dir, "Camera")
     ira_dir = os.path.join(data_dir, "IRA")
-    ira_highres_dir = os.path.join(data_dir, "IRA_highres")
+    # ira_highres_dir = os.path.join(data_dir, "IRA_highres")
     tof_dir = os.path.join(data_dir, "ToF")
 
     img_files = sorted([f for f in os.listdir(img_dir) if f.endswith('.png') or f.endswith('.jpg')])
@@ -60,7 +60,8 @@ def imgs_to_vid(data_dir, output_vid_path, fps=10):
     video = cv2.VideoWriter(output_vid_path, fourcc, fps, (width, height))
     cnt = 0
 
-    for index in range(len(img_files)):
+    lngth = min(len(img_files), len(ira_files), len(tof_files))
+    for index in range(lngth):
         img_path = os.path.join(img_dir, img_files[index])
         ira_path = os.path.join(ira_dir, ira_files[index])
         # ira_highres_path = os.path.join(ira_highres_dir, ira_highres_files[index])

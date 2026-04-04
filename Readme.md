@@ -56,3 +56,7 @@ TODO: benchmark inference speed
 5. How do we process heat patches?
    1. find literature support: use case is single-user.
    2. how do we seperate thermal interference and human as different patches?
+
+
+
+python entry_exit_detection/presence_detection_workspace/src/data_visualization_module/imgs_to_vid.py /Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_lcx_1 /Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_lcx_1/video.mp4 30 all
