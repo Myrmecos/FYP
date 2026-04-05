@@ -29,7 +29,7 @@ class ResidualHeatDetector:
             return 0.0
         return intersection / union
 
-    def get_residual_index(self, blobs, new_blob):
+    def get_residual_ori_index(self, blobs, new_blob):
         for idx, blob in enumerate(blobs):
             # we calculate the percentage of new blobs that is covered by existing blob's previous mask
             coverage = self._compute_coverage(new_blob.mask, blob.prev_mask)
@@ -37,10 +37,10 @@ class ResidualHeatDetector:
                 # check temperature difference
                 temp_diff = blob.mean_temp - new_blob.mean_temp
                 if temp_diff <= 0: # blob is colder than new blob, indicating it is residual
-                    return idx
+                    return idx, -1 # idx is residual; new_blob is human
                 else:
-                    return -1
-        return None
+                    return -1, idx # new_blob is residual; idx is human
+        return None, None
                 
 if __name__ == "__main__":
     from dataset import ThermalDataset

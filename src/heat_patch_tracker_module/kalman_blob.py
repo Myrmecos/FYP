@@ -54,13 +54,19 @@ class KalmanBlob(object):
     '''
     def __init__(self, id=None, mask=None, masked_temps=None, mean_temp=None, centroid=None):
         self.id = KalmanBlob.id  # unique identifier for the blob
+        self.id_fixed = KalmanBlob.id  # fixed id for the blob, will not change even if marked as residual
         KalmanBlob.id += 1
+        self.is_residual = False
         self.mask = mask
         self.prev_mask = None
         self.masked_temps = masked_temps # the thermal image with mask applied
         self.mean_temp = self._compute_mean_temp()
+        self.max_temp = self._compute_max_temp()
+        self.median_temp = self._compute_median_temp()
         self.centroid = centroid
         self.temp_history = [] # if temp is decreasing, is heat residual, not human
+        self.temp_trend = 0
+        self.k = 0 # temperature attenuation coefficient estimated
         self.centroid_history = [] # if move is directional (in some segments), likely human
         self.kalman_centroid_history = []  # history of centroids from Kalman filter
         self.queue_len = 400 # length of history to keep, longer history for better analysis
@@ -92,7 +98,9 @@ class KalmanBlob(object):
         self.masked_temps = masked_temps
         self._compute_centroid()
         self._compute_mean_temp()
-        self.temp_history.append(self.mean_temp)
+        self._compute_median_temp()
+        self._compute_max_temp()
+        self.temp_history.append(self.max_temp)
         self.centroid_history.append(self.centroid)
 
         if len(self.temp_history) > self.queue_len:
@@ -112,6 +120,16 @@ class KalmanBlob(object):
         if len(self.kalman_centroid_history) > self.queue_len:
             self.kalman_centroid_history.pop(0)
 
+    def update_temp_trend(self):
+        if len(self.temp_history) < 5:  # need enough history to make a decision
+            return 0
+        self.temp_trend = np.polyfit(range(len(self.temp_history)), np.array(self.temp_history, dtype=np.float32), 1)[0]  # linear trend
+        return self.temp_trend
+    def get_velocity(self):
+        # return the velocity based on Kalman filter state
+        # vel is the absolute values
+        return np.linalg.norm([self.kf.x[4], self.kf.x[5]])
+    
     def predict(self):
         """
         Advances the state vector and returns the predicted bounding box estimate.
@@ -148,8 +166,29 @@ class KalmanBlob(object):
     def _compute_mean_temp(self):
         if self.masked_temps.size == 0:
             return -1
-        self.mean_temp = self.masked_temps[self.masked_temps > 0].mean()
+        # take the 25 to 75 percentile mean to reduce the influence of noise and outliers
+        lower_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 25)
+        upper_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 75)
+        self.mean_temp = self.masked_temps[(self.masked_temps > lower_percentile) & (self.masked_temps < upper_percentile)].mean()
         return self.mean_temp
+    
+    def _compute_median_temp(self):
+        if self.masked_temps.size == 0:
+            return -1
+        # take the 25 to 75 percentile mean to reduce the influence of noise and outliers
+        lower_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 25)
+        upper_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 75)
+        self.median_temp = np.median(self.masked_temps[(self.masked_temps > lower_percentile) & (self.masked_temps < upper_percentile)])
+        return self.median_temp
+
+    def _compute_max_temp(self):
+        if self.masked_temps.size == 0:
+            return -1
+        # take the 25 to 75 percentile mean to reduce the influence of noise and outliers
+        lower_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 25)
+        upper_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 75)
+        self.max_temp = np.max(self.masked_temps[(self.masked_temps > lower_percentile) & (self.masked_temps < upper_percentile)])
+        return self.max_temp
 
     def outside_frame(self, frame_shape, margin = 3):
         img_h, img_w = frame_shape

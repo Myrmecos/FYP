@@ -19,7 +19,7 @@ class HeatSourceDetector:
 
     # given an ira image, return a binary mask of the heat source
     # utilize all methods in this class to find the best mask
-    def process_frame_mask(self, ira_img, min_size=10):
+    def process_frame_mask(self, ira_img, min_size=100):
         thresh, mask = self.get_thresh_mask_otsu_gaussian(ira_img)
         eroded_mask = self.erode_mask(mask)
         cleaned_mask = self.remove_small_regions(eroded_mask, min_size)
@@ -27,7 +27,7 @@ class HeatSourceDetector:
     
     # given an ira image, return a list of binary masks of the heat source blobs
     # utilize all methods in this class to find the best mask
-    def process_frame_connected_components(self, ira_img, min_size=400):
+    def process_frame_connected_components(self, ira_img, min_size=100):
         cleaned_mask = self.process_frame_mask(ira_img, min_size)
         component_masks = self.get_connected_components(cleaned_mask, min_size=min_size)
         return component_masks
