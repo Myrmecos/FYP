@@ -3,6 +3,7 @@ import os
 import pickle
 import sys
 from pathlib import Path
+from torch.utils.data import dataset
 
 import cv2
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -81,7 +82,7 @@ class ThermalDatasetAggregator():
             dataset_index += 1
         return self.datasets[dataset_index].get_tof(index)
 
-class ThermalDataset():
+class ThermalDataset(dataset.Dataset):
     def __init__(self, dataset_base_dir):
         self.dataset_base_dir = dataset_base_dir
         self.camera_dir = os.path.join(dataset_base_dir, "Camera")
@@ -96,6 +97,24 @@ class ThermalDataset():
         self.annotations_expanded = [-1 for _ in range(self.__len__())]  # type: List[int]
         self.process_annotations()
 
+    def __len__(self):
+        lngth = min(len(self.img_files), len(self.ira_files), len(self.tof_files))
+        return lngth
+    
+    def __getitem__(self, index):
+        img = self.get_image(index)
+        ira = self.get_ira(index)
+        ira_highres = self.get_ira_highres(index)
+        tof = self.get_tof(index)
+        label = self.get_label(index)
+        data_dict = {
+            "image": img,
+            "ira": ira,
+            "ira_highres": ira_highres,
+            "tof": tof,
+        }
+        return data_dict, label
+    
     def process_annotations(self):
         """annotation format: 
             valid_frame_indices: [[10, 1800]] # ranges of valid frames for this dataset, can be multiple ranges for one dataset
@@ -137,7 +156,7 @@ class ThermalDataset():
             for entry in self.annotations["sitting_on_bed"]:
                 for i in range(entry[0], entry[1]+1):
                     self.annotations_expanded[i] = 4
-            for entry in self.annotations["lying_no_cover"]:
+            for entry in self.annotations["lying_without_cover"]:
                 for i in range(entry[0], entry[1]+1):
                     self.annotations_expanded[i] = 5
             for entry in self.annotations["lying_with_cover"]:
@@ -197,9 +216,9 @@ class ThermalDataset():
         # 4: sitting on bed; 
         # 5: lying w/o cover; 
         # 6: lying with cover
-        annotation = load_yaml(self.annotation_path)
-        presence_label = annotation[index]['presence']
-        return presence_label
+        # annotation = load_yaml(self.annotation_path)
+        label = self.annotations_expanded[index]
+        return label
     
 
 if __name__ == "__main__":

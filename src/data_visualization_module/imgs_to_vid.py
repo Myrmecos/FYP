@@ -31,9 +31,46 @@ def stitch_images(images):
     stitched_image = cv2.hconcat(resized_images)
     return stitched_image
 
+def imgs_to_vid_with_label(img_dir, output_vid_path, fps=30):
+    """Same as imgs_to_vid, but add the label to the top left corner of each image. 
+    The label is extracted from the yaml file.
+    The index:
+    # -1: unknown or unlabeled; 
+    # 0: absence; 
+    # 1: presence, unclassified; 
+    # 2: standing; 
+    # 3: sitting by bed; 
+    # 4: sitting on bed; 
+    # 5: lying w/o cover; 
+    # 6: lying with cover
+    """
+    label_dict = {
+        -1: "unknown",
+        0: "absence",
+        1: "presence, unclassified",
+        2: "standing",
+        3: "sitting by bed",
+        4: "sitting on bed",
+        5: "lying w/o cover",
+        6: "lying with cover"
+    }
+    dataset = ThermalDataset(img_dir)
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    first_img = dataset.get_image(0)
+    height, width, layers = first_img.shape
+    video = cv2.VideoWriter(output_vid_path, fourcc, fps, (width, height))
+    for index in range(len(dataset)):
+        img = dataset.get_image(index)
+        label = dataset.get_label(index)
+        label_text = label_dict.get(label, "unknown")
+        cv2.putText(img, f'Label: {label_text}', (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        video.write(img)
+    video.release()
+    print(f"Video saved to {output_vid_path}")
+    
 # convert images to video
 def imgs_to_vid(data_dir, output_vid_path, fps=10):
-
+    
     img_dir = os.path.join(data_dir, "Camera")
     ira_dir = os.path.join(data_dir, "IRA")
     # ira_highres_dir = os.path.join(data_dir, "IRA_highres")
@@ -144,8 +181,9 @@ def thermal_to_vid_with_blobs(path = None, output_vid_path = None, fps = 30):
         
 
 if __name__ == "__main__":
+    # python src/data_visualization_module/imgs_to_vid.py /Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_2 /Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_2/video.mp4 30 label
     if len(sys.argv) < 3:
-        print("Usage: python imgs_to_vid.py <img_dir> <output_vid_path> <fps> <all/thermal>")
+        print("Usage: python imgs_to_vid.py <img_dir> <output_vid_path> <fps> <all/thermal/label>")
     else:
         if sys.argv[4] == "thermal":
             path = sys.argv[1]
@@ -157,6 +195,11 @@ if __name__ == "__main__":
             output_vid_path = sys.argv[2]
             fps = int(sys.argv[3])
             thermal_to_vid_with_blobs(path, output_vid_path, fps)
+        if sys.argv[4] == "label":
+            path = sys.argv[1]
+            output_vid_path = sys.argv[2]
+            fps = int(sys.argv[3])
+            imgs_to_vid_with_label(path, output_vid_path, fps)
         else:
             img_dir = sys.argv[1]
             output_vid_path = sys.argv[2]
