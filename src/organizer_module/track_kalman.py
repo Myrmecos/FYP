@@ -213,10 +213,20 @@ class Tracker:
                 #     k = 0
 
                 # use the history to directly compute the correlation between time and temperature, if the correlation is strongly negative, it indicates a decreasing trend
-                if len(history) >= 5:
-                    corr = np.corrcoef(np.arange(len(history)), history)[0, 1]
-                    print("Correlation between time and temp history: ", corr)
-                    k = corr
+                # we want to detect the case where temperature is steadily and gradually decreasing, indicating heat residual
+                # but we don't want to classify a blob with a sharp decline as residual, because it could be human being occluded by blanket
+                if len(history) <= 5:
+                    continue
+                corr = np.corrcoef(np.arange(len(history)), history)[0, 1]
+                print("Correlation between time and temp history: ", corr)
+    
+                # quantify if there exists a sharp decline in the temp history, which indicates a non-residual blob that is occluded by blanket
+                # sharp decline is defined as a drop of more than 5 degrees within 10 frames
+                for i in range(len(history)-10):
+                    if history[i] - history[i+10] > 5:
+                        corr = 0  # if there exists a sharp decline, we set k to 0 to avoid misclassifying occluded human as residual
+                        print("Sharp decline detected in temp history, likely occluded human. Blob ID: ", blob.id_fixed)
+                        break
                 
                 if corr < TEMP_DECREASE_THRESH:
                     blob.is_residual = True
@@ -226,7 +236,7 @@ class Tracker:
                 velocity = blob.get_velocity()
                 print("Blob ID: ", blob.id_fixed, " Temp history len: ", len(blob.temp_history), " Min temp history len: ", min_temp_history_len, " Sibling IDs: ", sibling_ids)
                 # print("k value:", k, "k > 0.1:", k>0.1)
-                # print("Velocity: ", velocity)
+                print("Velocity: ", velocity)
                 print("is residual: ", blob.is_residual)
                 
 
