@@ -75,7 +75,7 @@ def ira_decode_results(packet_data):
 
 # class def
 class DataCollector():
-    def __init__(self, save_path="entry_exit_detection/presence_detection_workspace/data", target_file="hall_lsb_1"):
+    def __init__(self, save_path="entry_exit_detection/presence_detection_workspace/data", target_file="case_study_hall"):
         self.UDP_IP = "0.0.0.0"
         self.UDP_PORT = 6900
         self.BUFFER_SIZE = 1460 // 2 + 13  # 数据包的长度：数据部分加上5个字节的头部信息
@@ -86,14 +86,14 @@ class DataCollector():
         print("*DEBUG: save path is ", self.save_path)
         self.makePath()
         self.frame_queue = multiprocessing.Queue()
-        self.thermalHighresCollector = Collector("/dev/cu.usbmodem1101")
+        self.thermalHighresCollector = Collector("/dev/cu.usbmodem12201")
         self.cnt = 0
 
     # the "main" function for displaying and saving data
     def displayAndSave(self):
         self.framecnt = 0
-        self.tof_ready = False; self.ira_ready = False; self.rgb_ready = False
-        self.tof_save = []; self.ira_save = []; self.rgb_save = []
+        self.tof_ready = False; self.ira_ready = False
+        self.tof_save = []; self.ira_save = []
         while True:
             self.framecnt += 1
             # print("================Processing data===============")
@@ -101,35 +101,21 @@ class DataCollector():
             self.makeTimeString(frame_data)
             self.processFrame(frame_data)
 
-            print(f"tof, ira, rgb ready: {self.tof_ready}, {self.ira_ready}, {self.rgb_ready}")
-            if self.tof_ready and self.ira_ready and self.rgb_ready:
-                self.tof_ready = False; self.ira_ready = False; self.rgb_ready = False
+            # print(f"tof, ira ready: {self.tof_ready}, {self.ira_ready}")
+            if self.tof_ready and self.ira_ready:
+                self.tof_ready = False; self.ira_ready = False
                 self.save()
                 self.visualize()
-                self.rgb_save = []
                 self.tof_save = []
                 self.ira_save = []
                 
 
     
     def save(self):
-        camera_image = self.rgb_save[0]
-        if camera_image is None or self.tof_save is None or self.ira_save is None:
+        if self.tof_save is None or self.ira_save is None:
             return
-        
-        # self.cnt += 1
-        # if self.cnt % 4 == 0:
-        #     self.cnt = 0
-        # else:
-        #     return
-        # ============ rgb ================
-        
-        camera_filename = os.path.join(self.camera_path, f"{self.time_string}.jpg")
-        if self.framecnt%20==0:
-            pass
-        cv2.imwrite(camera_filename, camera_image)
 
-        # =========== TOF depth =============
+        # =========== TOF depth ============
         tof_path = os.path.join(self.tof_path, f"{self.time_string}.pkl")
         with open(tof_path, 'wb') as f:
             pickle.dump(self.tof_save, f)
@@ -142,34 +128,22 @@ class DataCollector():
 
 
     def visualize(self):
-        rgb = self.rgb_save[-1]
         tof_depth = self.tof_save[-1]['tof_depth'][:, :, 0]
         tof_reflection = self.tof_save[-1]['reflections'][:, :, 0]
-        ira_temp = self.ira_save[-1]['ira_temp'][0]
-        ira_highres = self.ira_save[-1]['ira_temp'][1]
-        # ============ rgb ================
-        # print(f"rgb is none?: {rgb is None}")
-        # print(f"tof is none?: {tof_depth is None}")
-        # print(f"ira is none?: {ira_temp is None}")
-        # print(f"ira_highres is none?: {ira_highres is None}")
+        ira_temp_data = self.ira_save[-1]['ira_temp']
+        ira_temp = ira_temp_data[0]
+        ira_highres = ira_temp_data[1]
 
-        if rgb is None or tof_depth is None or ira_temp is None or ira_highres is None:
+        if tof_depth is None or ira_temp is None or ira_highres is None:
             return
-        # print(rgb)
-        rgb = np.flip(rgb, 0)
-        rgb = np.flip(rgb, 1)
-        cv2.imshow("RGB image", rgb)
-        cv2.waitKey(1)
 
         # =========== TOF depth =============
-        # print("tof_data looks like: ", self.tof_data)
         tof_vis = cv2.resize(tof_depth, (240, 240), interpolation=cv2.INTER_NEAREST)
         tof_vis = (tof_vis) / (3500) * 255
         tof_vis[tof_vis > 255] = 255
         tof_vis = cv2.applyColorMap((tof_vis).astype(np.uint8), cv2.COLORMAP_JET)
         tof_vis = np.flip(tof_vis, 0)
         tof_vis = np.flip(tof_vis, 1)
-        #vis_data = self.dd.barDepth(tof_depth[:,:,0], (5, 4))
         cv2.imshow('TOF Depth', tof_vis)
         cv2.waitKey(1)
 
@@ -181,14 +155,11 @@ class DataCollector():
         cv2.imshow('TOF reflection', reflections_vis)
         cv2.waitKey(1)
 
-        # ===============IRA =================
-        # Visualize IRA temperature data
+        # =============== IRA =================
         ira_temp = SubpageInterpolating(ira_temp)
-        # if there is value lager than 100, set it to 100
         ira_temp[ira_temp > 50] = 50
         ira_temp[ira_temp < 0] = 0
         ira_temp_vis = cv2.resize(ira_temp, (320, 240), interpolation=cv2.INTER_NEAREST)
-        # normalize the temperature data
         ira_temp_vis = (ira_temp_vis - ira_temp_vis.min()) / (ira_temp_vis.max() - ira_temp_vis.min()) * 255
         ira_temp_vis = cv2.applyColorMap((ira_temp_vis).astype(np.uint8), cv2.COLORMAP_JET)
         ira_temp_vis = np.flip(ira_temp_vis, 0)
@@ -197,24 +168,19 @@ class DataCollector():
         cv2.waitKey(1)
 
         # ================= IRA highres ===============
-        # Visualize IRA temperature data
-        # if there is value lager than 50, set it to 50
-        # similarly for 0
         ira_highres[ira_highres > 50] = 50
         ira_highres[ira_highres < 0] = 0
-        ira_temp_vis = cv2.resize(ira_highres, (320, 240), interpolation=cv2.INTER_NEAREST)
-        # normalize the temperature data
-        ira_temp_vis = (ira_temp_vis - ira_temp_vis.min()) / (ira_temp_vis.max() - ira_temp_vis.min()) * 255
-        ira_temp_vis = cv2.applyColorMap((ira_temp_vis).astype(np.uint8), cv2.COLORMAP_JET)
-        ira_temp_vis = np.flip(ira_temp_vis, 0)
-        ira_temp_vis = np.flip(ira_temp_vis, 1)
-        cv2.imshow('IRA Temp highres', ira_temp_vis)
+        ira_highres_vis = cv2.resize(ira_highres, (320, 240), interpolation=cv2.INTER_NEAREST)
+        ira_highres_vis = (ira_highres_vis - ira_highres_vis.min()) / (ira_highres_vis.max() - ira_highres_vis.min()) * 255
+        ira_highres_vis = cv2.applyColorMap((ira_highres_vis).astype(np.uint8), cv2.COLORMAP_JET)
+        ira_highres_vis = np.flip(ira_highres_vis, 0)
+        ira_highres_vis = np.flip(ira_highres_vis, 1)
+        cv2.imshow('IRA Temp highres', ira_highres_vis)
         cv2.waitKey(1)     
 
     # take one frame, process it and store info
     def processFrame(self, frame_data):
-        # print("frame data looks like this: ", frame_data)
-        print("keys of frame data", frame_data.keys())
+        # print("keys of frame data", frame_data.keys())
         if isinstance(frame_data, dict):
             if 'tof_depth' in frame_data.keys():
                 tof_depth = frame_data.get('tof_depth')
@@ -226,16 +192,6 @@ class DataCollector():
                 ira_temp = frame_data.get('ira_temp')
                 self.ira_save.append({'time': self.time_string, 'ira_temp': ira_temp})
                 self.ira_ready = True
-            if 'camera_data' in frame_data.keys():
-                #cam_count+=1
-                camera_data = frame_data.get('camera_data')
-                np_data = np.frombuffer(camera_data, dtype=np.uint8)
-                # decoding the image data, and flip the image
-                image = cv2.imdecode(np_data, cv2.IMREAD_COLOR)
-                image = cv2.flip(image, 1)
-                
-                self.rgb_save.append(image)
-                self.rgb_ready = True
             
     # make a string that represents the frame time
     def makeTimeString(self, frame_data):
@@ -252,13 +208,8 @@ class DataCollector():
             os.mkdir(self.save_path)
         if not os.path.exists(self.save_path + '/' + self.target_file):
             os.mkdir(self.save_path + '/' + self.target_file)
-        print(f"*DEBUG: target path {self.save_path + '/' + self.target_file} exists? {os.path.exists(self.save_path + '/' + self.target_file)}")
-        
-        self.camera_path = self.save_path + '/' + self.target_file + "/Camera/"   # this is the path to save the camera frames
-        if not os.path.exists(self.camera_path):
-            os.mkdir(self.camera_path)
+        # print(f"*DEBUG: target path {self.save_path + '/' + self.target_file} exists? {os.path.exists(self.save_path + '/' + self.target_file)}")
 
-        
         self.tof_path = self.save_path + '/' + self.target_file + "/ToF/"    # this is the path to save the tof data
         if not os.path.exists(self.tof_path):
             os.mkdir(self.tof_path)
@@ -270,22 +221,15 @@ class DataCollector():
         self.ira_highres_path = self.save_path + '/' + self.target_file + "/IRA_highres/"
         if not os.path.exists(self.ira_highres_path):
             os.mkdir(self.ira_highres_path)
-    
+
     # handle decoded frames in another process
     def reset_frame(self):
-        self.current_frame_data = {}
         self.tof_data = {}
         self.irate_data = {}
 
-        
-        self.camera_received_packet_count = 0
-        self.camera_expected_packet_count = 0
-
         self.tof_received_packet_count = 0
-
         self.irate_received_packet_count = 0
 
-        self.camera_frame_complete = False
         self.tof_frame_complete = False
         self.irate_frame_complete = False
     
@@ -301,17 +245,14 @@ class DataCollector():
         self.irate_expected_packet_count = 0
         self.irate_received_packet_count = 0
 
-        self.camera_expected_packet_count = 0
-        self.camera_received_packet_count = 0
-
-
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # 允许端口重用
         sock.bind((self.UDP_IP, self.UDP_PORT))
         while True:
             data, addr = sock.recvfrom(self.BUFFER_SIZE)
             if len(data) < 5:
-                print("DEBUG: packet too small, we skip it.")
+                # print("DEBUG: packet too small, we skip it.")
+                pass
             
             self.parse_data(data)
     
@@ -329,15 +270,6 @@ class DataCollector():
 
         #print(f"Packet id: {packet_id}")
         if frame_id != self.current_frame_id:
-            if self.current_frame_id is not None and self.camera_frame_complete:
-                sorted_camera_data = b''.join(self.current_frame_data[i] for i in sorted(self.current_frame_data))
-                # 将完整的帧数据放入队列中
-                if sorted_camera_data is not None:
-                    self.frame_queue.put({
-                        'camera_data': sorted_camera_data,
-                        'time': frame_time
-                    })
-            
             if self.current_frame_id is not None and self.tof_frame_complete:
                 # 组装 TOF 数据并发送至显示队列
                 #print("saving TOF data")
@@ -353,15 +285,14 @@ class DataCollector():
             
             if self.current_frame_id is not None and self.irate_frame_complete:
                 # 组装ira data
-                #print("saving ira data")
-                print(f"ira data size: {len(self.irate_data)}")
-                print(f"ira expected packet num: {self.irate_expected_packet_count}")
-                print(f"irate frame complete: {self.irate_frame_complete}")
+                # print(f"ira data size: {len(self.irate_data)}")
+                # print(f"ira expected packet num: {self.irate_expected_packet_count}")
+                # print(f"irate frame complete: {self.irate_frame_complete}")
                 full_irate_data = b''.join(self.irate_data[i] for i in sorted(self.irate_data))
                 ira_temp = ira_decode_results(full_irate_data)
                 ira_temp_highres = self.thermalHighresCollector.getImage()
                 self.frame_queue.put({
-                    'ira_temp': [ira_temp, np.flip(ira_temp_highres, 1)], 
+                    'ira_temp': [ira_temp, np.flip(ira_temp_highres, 1)],
                     'time': frame_time
                 })
                 
@@ -376,10 +307,6 @@ class DataCollector():
             self.tof_data[packet_id] = packet_data
             self.tof_received_packet_count += 1
             self.tof_expected_packet_count = max(self.tof_expected_packet_count, packet_id)
-        elif data_type == 'C':
-            self.current_frame_data[packet_id] = packet_data
-            self.camera_received_packet_count += 1
-            self.camera_expected_packet_count = max(self.camera_expected_packet_count, packet_id)
         elif data_type == 'T':
             self.irate_data[packet_id] = packet_data
             self.irate_received_packet_count += 1
@@ -388,11 +315,6 @@ class DataCollector():
         if (self.tof_received_packet_count == self.tof_expected_packet_count) and len(self.tof_data) > 0:
             self.tof_frame_complete = True
 
-        print(f"DEBUG: camera received {self.camera_received_packet_count} frames, need {self.camera_expected_packet_count} frames.")
-        if (self.camera_received_packet_count == self.camera_expected_packet_count) and len(self.current_frame_data) > 0:
-            
-            self.camera_frame_complete = True
-        
         if (self.irate_received_packet_count == self.irate_expected_packet_count) and len(self.irate_data) > 0:
             self.irate_frame_complete = True
 
