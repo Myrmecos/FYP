@@ -197,6 +197,7 @@ class KalmanBlob(object):
         lower_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 25)
         upper_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 75)
         self.max_temp = np.max(self.masked_temps[(self.masked_temps > lower_percentile) & (self.masked_temps < upper_percentile)])
+        # self.max_temp = 30
         return self.max_temp
 
     def outside_frame(self, frame_shape, margin = 3):

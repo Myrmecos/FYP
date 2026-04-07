@@ -20,7 +20,7 @@ class PostProcessor:
         self.blob_records = {}  # key: blob id_fixed, value: dict.
         # value of blob record dict:
         # {'start_frame': int, 'end_frame': int, 'temp_history': list of float, 'centroid_history': list of (x,y), 'is_residual': bool}
-        self.posture_records = []  # key: frame_idx, value: posture
+        self.posture_records = []  
         self.posture_frame_idx = []
 
     def get_blobs(self, blobs, frame_idx):
@@ -116,11 +116,10 @@ if __name__ == "__main__":
 
         cv2.putText(ira_color, f'Posture: {posture_label}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         cv2.imshow('ira', ira_color)
-        key = cv2.waitKey(1)
+        key = cv2.waitKey(0)
         if key == ord('q'):
             cv2.destroyAllWindows()
             sys.exit(0)
-        # cv2.destroyAllWindows()
 
     def test_postprocessor():
         # use a data entry as test: /Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall5
@@ -133,18 +132,23 @@ if __name__ == "__main__":
         #   2.1. posture detector module: load the model
         posture_detector_model = SimpleIRA_CNN()
         # load the pretrained weights for posture detection model
-        posture_detector_model.load_state_dict(torch.load('/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/weights/posture_cnn_cross_env_env5.pth'))
+        posture_detector_model.load_state_dict(torch.load('/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/weights/posture_cnn_cross_env_env3.pth'))
         #   2.2. kalman tracker module: load the module
         tracker = Tracker()
         #   2.4. postprocessor module: load the module
         postprocessor = PostProcessor()
+
+        pose_labels_actual = []
         
 
 
         # 3. loop through each fraome
-        for idx in range(0, len(dataset)):
+        for idx in range(147, 1147):
             label = dataset.annotations_expanded[idx]
+            pose_labels_actual.append(label)
             ira_highres = dataset.get_ira_highres(idx)
+            print(ira_highres.shape)
+            break
             #   3.1. detect heat source
             thresh, mask = heat_detector.get_thresh_mask_otsu(ira_highres)
             # mask_processed = heat_detector.process_frame_mask(ira_highres, min_size=100)
@@ -157,6 +161,9 @@ if __name__ == "__main__":
             for blob in tracker.blobs:
                 if blob.is_residual == False: # if it is classified as human
                     hasHuman = True
+
+            hasHuman = label in [2, 3, 4, 5, 6] # use the ground truth label to determine presence for testing purpose --- IGNORE ---
+            
             if hasHuman:
                 # clip and normalize the ira_highres image, and convert to tensor before feeding into the posture detection model
                 ira_highres = thermalinvariantpreprocessor(ira_highres)
@@ -168,19 +175,31 @@ if __name__ == "__main__":
                 postprocessor.get_posture(posture_label, idx)  # inverse remap the posture label
                 posture_str = label_to_text_simple(posture_label)
             else:
-                posture_label = 0
+                posture_label = label
                 posture_str = label_to_text_simple(posture_label)
                 postprocessor.get_posture(0, idx)
             
             # visualize the result for this frame
-            visualize_frame(ira_highres, tracker.blobs, posture_str, idx)
+            # visualize_frame(ira_highres, tracker.blobs, posture_str, idx)
         
         print(postprocessor.posture_records)
-        # 4. postprocess
-        #   4.1. postprocess presence, make a list of presence data
-        postprocessor.postprocess_presence()
-        #   4.2. postprocess postures, make a list of posture data.
-        postprocessor.postprocess_posture()
+
+        pose_labels_pred = postprocessor.posture_records
+        # calculate the accuracy of posture classification
+        correct = 0        
+        total = 0
+        for pred, actual in zip(pose_labels_pred, pose_labels_actual):
+            if pred == actual:
+                correct += 1
+            total += 1
+        accuracy = correct / total if total > 0 else 0
+        print(f"Posture classification accuracy: {accuracy:.4f}")
+
+        # # 4. postprocess
+        # #   4.1. postprocess presence, make a list of presence data
+        # postprocessor.postprocess_presence()
+        # #   4.2. postprocess postures, make a list of posture data.
+        # postprocessor.postprocess_posture()
 
         # 5. compare the smoothed posture classification result with the ground truth label, and visualize the comparison
         # 5. visualize: plot the posture classification result for each frame, and compare with the ground truth label

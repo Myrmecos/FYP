@@ -230,7 +230,16 @@ class Tracker:
                 
 
                 blob.corr = corr
-                if corr < TEMP_DECREASE_THRESH:
+                # corr and temp difference between current temp and background temp can jointly determine if the blob is residual
+                # we know that corr threshold should be large if temp diff is large, 
+                # if corr < TEMP_DECREASE_THRESH:
+                # the relations between temp and environmental temp is: T(t) = T_env + (T_initial - T_env) * exp(-k*t)
+                t_initial = history[0]
+                t_final = history[-1]
+                t_env = background_temp
+                k = -np.log((t_final - t_env) / (t_initial - t_env)) / len(history)
+                print("Estimated k: ", k)
+                if corr < TEMP_DECREASE_THRESH and k > 0.003:
                     print("classified as residual due to decreasing temp trend. Blob ID: ", blob.id_fixed)
                     blob.is_residual = True
                     blob.id = -1  # mark as residual blob
