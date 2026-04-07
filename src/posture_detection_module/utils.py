@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "heatsource_detection_module"))
 from heatsource_detection_module.extract import normalize_temperature
+from tqdm import tqdm
 
 
 kept_labels = [0, 2, 3, 4, 5, 6]
@@ -148,7 +149,7 @@ def train_model(model, train_dataloader, val_dataloader, label_to_index = label_
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
-        for batch in train_dataloader:
+        for batch in tqdm(train_dataloader, desc=f"Epoch {epoch+1}/{num_epochs}"):
             thermal = batch[0]['ira_highres'].to(device=device, dtype=torch.float32)
             labels = remap_labels(batch[1], label_to_index, device)
             
