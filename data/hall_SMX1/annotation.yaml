@@ -1,0 +1,8 @@
+valid_frame_indices: [[158, 3355]]
+presence: [[434, 2763]]
+standing: [[435, 635], [2696, 2753]]
+sitting_by_bed: [[649, 915], [2465, 2677]]
+sitting_on_bed: [[985, 1244], [2233, 2456]]
+lying_without_cover: [[1311, 1592], [1967, 2189]]
+lying_with_cover: [[1645, 1946]]
+exit: [[2677, 2692]]
