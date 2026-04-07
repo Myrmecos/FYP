@@ -125,8 +125,7 @@ if __name__ == "__main__":
     def test_postprocessor():
         # use a data entry as test: /Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall5
         # 1. load the dataset
-        dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/home2")
-
+        dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall2")
         # 2. initialize our system's components ==================================
         #   2.1. heatsource detection module: load the module
         heat_detector = HeatSourceDetector()
@@ -142,11 +141,8 @@ if __name__ == "__main__":
         
 
 
-        print("DEBUG: dataset length: ", len(dataset))
-
         # 3. loop through each fraome
         for idx in range(len(dataset)):
-            print("DEBUG: index: ", idx)
             label = dataset.annotations_expanded[idx]
             ira_highres = dataset.get_ira_highres(idx)
             #   3.1. detect heat source

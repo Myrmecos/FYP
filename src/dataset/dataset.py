@@ -96,10 +96,6 @@ class ThermalDataset(dataset.Dataset):
         self.tof_files = sorted([f for f in os.listdir(self.tof_dir) if f.endswith('.pkl')])
         self.annotations_expanded = [-1 for _ in range(self.__len__())]  # type: List[int]
         self.process_annotations()
-
-    def __len__(self):
-        lngth = min(len(self.img_files), len(self.ira_files), len(self.tof_files))
-        return lngth
     
     def __getitem__(self, index):
         img = self.get_image(index)
@@ -166,7 +162,7 @@ class ThermalDataset(dataset.Dataset):
             print("problems with annotation format. Please check the annotation.yaml file. All frames will be labeled as -1 (unknown).")
     def __len__(self):
         lngth = min(len(self.img_files), len(self.ira_files), len(self.tof_files))
-        return len(self.img_files)
+        return lngth
     
     def get_annotation(self, index):
         return self.annotations_expanded[index]
