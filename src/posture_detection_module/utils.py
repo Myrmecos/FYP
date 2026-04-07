@@ -9,24 +9,59 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "heatsource_detection_modu
 from heatsource_detection_module.extract import normalize_temperature
 from tqdm import tqdm
 
-
-kept_labels = [0, 2, 3, 4, 5, 6]
+# -1: unknown or unlabeled; 
+# 0: absence; 
+# 1: presence, unclassified; 
+# 2: standing; 
+# 3: sitting by bed; 
+# 4: sitting on bed; 
+# 5: lying w/o cover; 
+# 6: lying with cover
+kept_labels = [2, 3, 4, 5, 6]
 label_to_index = {label: idx for idx, label in enumerate(kept_labels)}
 index_to_label = {idx: label for label, idx in label_to_index.items()}
-
+label_to_text_dict = {
+    -1: "unknown",
+    0: "absence",
+    1: "presence, unclassified",
+    2: "standing",
+    3: "sitting by bed",
+    4: "sitting on bed",
+    5: "lying w/o cover",
+    6: "lying with cover"
+}
 TEMP_MIN = 10.0
 TEMP_MAX = 40.0
 
 
+# map label to index
 def remap_labels(labels, label_to_index=label_to_index, device='cpu'):
     labels_tensor = torch.as_tensor(labels)
     if labels_tensor.dim() == 0 or labels_tensor.numel() == 1:
+        print("DEBUG: int(labels): ", int(labels))
         return torch.tensor(label_to_index[int(labels)], dtype=torch.long, device=device)
     return torch.tensor(
         [label_to_index[int(label)] for label in labels],
         dtype=torch.long,
         device=device,
     )
+
+def remap_labels_simple(label, label_to_index=label_to_index):
+    return label_to_index[label]
+
+def inverse_remap_labels_simple(indices, index_to_label=index_to_label):
+    if isinstance(indices, torch.Tensor):
+        indices = indices.cpu().numpy()
+    if np.isscalar(indices):
+        return index_to_label[int(indices)]
+    return [index_to_label[int(idx)] for idx in indices]
+
+def label_to_text_simple(labels, label_to_text_dict=label_to_text_dict):
+    if isinstance(labels, torch.Tensor):
+        labels = labels.cpu().numpy()
+    if np.isscalar(labels):
+        return label_to_text_dict[int(labels)]
+    return [label_to_text_dict[int(label)] for label in labels]
 
 
 class ThermalInvariantPreprocessor:

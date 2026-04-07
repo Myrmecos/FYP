@@ -3,7 +3,7 @@ import torch.nn as nn
 import numpy as np
 
 class SimpleIRA_CNN(nn.Module):
-    def __init__(self, num_classes=6):
+    def __init__(self, num_classes=5):
         super().__init__()
         
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, padding=1)
