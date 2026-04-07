@@ -1,4 +1,4 @@
-valid_frame_indices: [[141, 4034]
+valid_frame_indices: [[141, 4034]]
 presence: [[758, 3038]]
 standing: [[760, 976], [3032, 3035]]
 sitting_by_bed: [[984, 1160], [2880, 3028]]
