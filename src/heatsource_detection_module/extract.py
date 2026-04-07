@@ -13,6 +13,172 @@ from dataset.dataset import ThermalDataset, ThermalDatasetAggregator
 
 import numpy as np
 
+# ==============================================================================
+# Thermal image preprocessing utilities for cross-environment generalization
+# ==============================================================================
+
+def clip_temperature(ira_img, min_val=10.0, max_val=40.0):
+    """Clip raw thermal values to the valid temperature range [min_val, max_val]."""
+    return np.clip(ira_img, min_val, max_val)
+
+
+def normalize_temperature(ira_img, min_val=10.0, max_val=40.0):
+    """Min-max normalize thermal values to [0, 1] using the known temperature range.
+
+    Args:
+        ira_img: raw IRA thermal array (Celsius)
+        min_val: lower bound of valid temperature range (default 10.0°C)
+        max_val: upper bound of valid temperature range (default 40.0°C)
+
+    Returns:
+        normalized array in [0, 1]
+    """
+    clipped = clip_temperature(ira_img, min_val, max_val)
+    return (clipped - min_val) / (max_val - min_val)
+
+
+def compute_thermal_features(ira_img, min_blob_size=40):
+    """Extract temperature-invariant features from a thermal image.
+
+    Returns a dict of ~21 features designed for cross-environment generalization.
+    All features are relative/ratio-based and invariant to absolute temperature shifts.
+    """
+    flat = ira_img.flatten().astype(np.float64)
+    h, w = ira_img.shape
+
+    # ---- 1. Statistical (temperature-invariant) --------------------------------
+    sorted_flat = np.sort(flat)
+    p10, p25, p50, p75, p90 = np.percentile(sorted_flat, [10, 25, 50, 75, 90])
+    iqr = p75 - p25
+    range_val = sorted_flat[-1] - sorted_flat[0] + 1e-8
+
+    normalized_spread = iqr / range_val
+    cv = np.std(flat) / (np.mean(flat) + 1e-8)
+
+    from scipy.stats import skew, kurtosis
+    skewness = float(skew(flat))
+    kurt = float(kurtosis(flat))
+
+    # ---- 2. Histogram (16 bins, normalized) ------------------------------------
+    norm_img = (ira_img - sorted_flat[0]) / (range_val + 1e-8)
+    hist, _ = np.histogram(norm_img.flatten(), bins=16, range=(0, 1), density=True)
+    hist = hist.astype(np.float32)
+    entropy = -np.sum(hist * np.log2(hist + 1e-8))
+    modal_ratio = float(np.max(hist))
+
+    # Bimodality coefficient
+    n = len(flat)
+    bc_numerator = skewness ** 2 + 1
+    bc_denom = (kurt + 3 * (n - 1) ** 2 / ((n - 2) * (n - 3) + 1e-8)) + 1e-8
+    bimodality_coef = bc_numerator / bc_denom
+
+    # ---- 3. Spatial / heat distribution ----------------------------------------
+    # Normalized centroid of the full thermal image (weighted by intensity)
+    total = np.sum(flat) + 1e-8
+    cx_float = np.sum(flat * np.tile(np.arange(w), h) / total)
+    cy_float = np.sum(flat * np.repeat(np.arange(h), w) / total)
+    centroid_norm_x = cx_float / w
+    centroid_norm_y = cy_float / h
+
+    # Hottest point normalized location
+    hot_idx = np.unravel_index(np.argmax(ira_img), ira_img.shape)
+    hotspot_norm_x = hot_idx[1] / w
+    hotspot_norm_y = hot_idx[0] / h
+
+    # ---- 4. Blob features (using HeatSourceDetector) ----------------------------
+    detector = HeatSourceDetector()
+    try:
+        blobs = detector.process_frame_connected_components(ira_img, min_size=min_blob_size)
+    except Exception:
+        blobs = []
+
+    blob_count = len(blobs)
+    total_area = h * w
+
+    if blobs:
+        # Sort by area descending
+        areas = [b.sum() for b in blobs]
+        order = np.argsort(areas)[::-1]
+        largest_mask = blobs[order[0]]
+
+        # Bounding box of largest blob
+        y_coords, x_coords = np.where(largest_mask > 0)
+        min_x, max_x = int(x_coords.min()), int(x_coords.max())
+        min_y, max_y = int(y_coords.min()), int(y_coords.max())
+        bbox_h = max_y - min_y + 1
+        bbox_w = max_x - min_x + 1
+        bbox_area = largest_mask.sum()
+
+        largest_bbox_aspect_ratio = bbox_w / (bbox_h + 1e-8)
+        # Contour of largest blob
+        _, contours, _ = cv2.findContours(largest_mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        perimeter = float(cv2.arcLength(contours[0], True))
+        largest_compactness = 4 * np.pi * bbox_area / ((perimeter ** 2) + 1e-8)
+        blob_area_ratio = bbox_area / total_area
+
+        # Spatial spread (covariance of blob pixels)
+        if len(x_coords) > 5:
+            cov = np.cov(x_coords, y_coords)
+            eigenvals = np.sort(np.linalg.eigvalsh(cov))[::-1]
+            spread_aspect_ratio = eigenvals[0] / (eigenvals[1] + 1e-8)
+            heat_spread_norm = np.sqrt(eigenvals[0] + eigenvals[1]) / np.sqrt(h * w)
+        else:
+            spread_aspect_ratio = 0.0
+            heat_spread_norm = 0.0
+    else:
+        largest_bbox_aspect_ratio = 0.0
+        largest_compactness = 0.0
+        blob_area_ratio = 0.0
+        spread_aspect_ratio = 0.0
+        heat_spread_norm = 0.0
+
+    # ---- 5. Texture features (LBP histogram) ------------------------------------
+    try:
+        from skimage.feature import local_binary_pattern
+        lbp = local_binary_pattern(norm_img, P=8, R=1, method='uniform')
+        lbp_hist, _ = np.histogram(lbp.ravel(), bins=10, range=(0, 10), density=True)
+        lbp_entropy = -np.sum(lbp_hist * np.log2(lbp_hist + 1e-8))
+    except Exception:
+        lbp_entropy = 0.0
+
+    # ---- 6. Thermal gradient features -------------------------------------------
+    sobel_x = cv2.Sobel(ira_img.astype(np.float64), cv2.CV_64F, 1, 0, ksize=3)
+    sobel_y = cv2.Sobel(ira_img.astype(np.float64), cv2.CV_64F, 0, 1, ksize=3)
+    grad_mag = np.sqrt(sobel_x ** 2 + sobel_y ** 2)
+    grad_mag_normalized = grad_mag / (range_val + 1e-8)
+    grad_mean = float(np.mean(grad_mag_normalized))
+    grad_max = float(np.max(grad_mag_normalized))
+
+    return {
+        # Statistical
+        'normalized_spread': normalized_spread,
+        'cv': cv,
+        'skewness': skewness,
+        'kurtosis': kurt,
+        'entropy': entropy,
+        # Histogram
+        'modal_ratio': modal_ratio,
+        'bimodality_coef': bimodality_coef,
+        # Spatial
+        'centroid_norm_x': centroid_norm_x,
+        'centroid_norm_y': centroid_norm_y,
+        'hotspot_norm_x': hotspot_norm_x,
+        'hotspot_norm_y': hotspot_norm_y,
+        # Blob
+        'blob_count': float(blob_count),
+        'blob_area_ratio': blob_area_ratio,
+        'largest_bbox_aspect_ratio': largest_bbox_aspect_ratio,
+        'largest_compactness': largest_compactness,
+        'spread_aspect_ratio': spread_aspect_ratio,
+        'heat_spread_norm': heat_spread_norm,
+        # Texture
+        'lbp_entropy': lbp_entropy,
+        # Gradient
+        'grad_mean': grad_mean,
+        'grad_max': grad_max,
+    }
+
+
 class HeatSourceDetector:
     def __init__(self):
         pass

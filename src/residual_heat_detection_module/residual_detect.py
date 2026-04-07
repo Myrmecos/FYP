@@ -23,11 +23,22 @@ class ResidualHeatDetector:
 
     # calculate the percentage of mask 1 covered by mask 2
     def _compute_coverage(self, mask1, mask2):
-        intersection = np.logical_and(mask1, mask2).sum()
-        union = mask1.sum()
-        if union == 0:
+        """Compute how much mask1 overlaps with mask2.
+        Returns 0.0 safely if either mask is None or invalid."""
+        if mask1 is None or mask2 is None:
             return 0.0
-        return intersection / union
+        
+        # Ensure both are boolean arrays of same shape
+        if mask1.shape != mask2.shape:
+            # Optional: resize or skip if shapes differ (rare)
+            return 0.0
+        
+        intersection = np.logical_and(mask1.astype(bool), mask2.astype(bool)).sum()
+        area1 = mask1.astype(bool).sum()
+        
+        if area1 == 0:
+            return 0.0
+        return intersection / area1
 
     def get_residual_ori_index(self, blobs, new_blob):
         for idx, blob in enumerate(blobs):

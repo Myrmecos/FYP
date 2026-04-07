@@ -66,7 +66,7 @@ class KalmanBlob(object):
         self.centroid = centroid
         self.temp_history = [] # if temp is decreasing, is heat residual, not human
         self.temp_trend = 0
-        self.k = 0 # temperature attenuation coefficient estimated
+        self.corr = 0 # temperature attenuation coefficient estimated
         self.centroid_history = [] # if move is directional (in some segments), likely human
         self.kalman_centroid_history = []  # history of centroids from Kalman filter
         self.queue_len = 400 # length of history to keep, longer history for better analysis
@@ -92,7 +92,10 @@ class KalmanBlob(object):
         self.confidence = 0.5
         
 
-    def update(self, mask, masked_temps, isobserved):
+    def update(self, mask, masked_temps, isobserved = True):
+        """Update the state of the blob with new observations.
+        mask: binary mask of the detected blob
+        masked_temps: the thermal image with mask applied, used to compute temperature features"""
         self.prev_mask = self.mask
         self.mask = mask
         self.masked_temps = masked_temps
@@ -125,6 +128,7 @@ class KalmanBlob(object):
             return 0
         self.temp_trend = np.polyfit(range(len(self.temp_history)), np.array(self.temp_history, dtype=np.float32), 1)[0]  # linear trend
         return self.temp_trend
+    
     def get_velocity(self):
         # return the velocity based on Kalman filter state
         # vel is the absolute values
@@ -132,6 +136,7 @@ class KalmanBlob(object):
     
     def predict(self):
         """
+        update when no observation
         Advances the state vector and returns the predicted bounding box estimate.
         """
         # to prevent area become negative after prediction, make zero the rate of area change
@@ -155,6 +160,7 @@ class KalmanBlob(object):
         return self.mask
     
     def _compute_centroid(self):
+        """Compute current frames' centroid of the blob, excluding zero values which are outside mask"""
         moments = cv2.moments(self.mask.astype('uint8'))
         if moments["m00"] != 0:
             cX = int(moments["m10"] / moments["m00"])
@@ -164,6 +170,7 @@ class KalmanBlob(object):
             self.centroid = (-1, -1)
 
     def _compute_mean_temp(self):
+        """Compute current frames' mean temerature of the blob, excluding zero values which are outside mask"""
         if self.masked_temps.size == 0:
             return -1
         # take the 25 to 75 percentile mean to reduce the influence of noise and outliers
@@ -173,6 +180,7 @@ class KalmanBlob(object):
         return self.mean_temp
     
     def _compute_median_temp(self):
+        """Compute current frames' median temerature of the blob, excluding zero values which are outside mask"""
         if self.masked_temps.size == 0:
             return -1
         # take the 25 to 75 percentile mean to reduce the influence of noise and outliers
@@ -182,6 +190,7 @@ class KalmanBlob(object):
         return self.median_temp
 
     def _compute_max_temp(self):
+        """Compute current frames' maximum temerature of the blob, excluding zero values which are outside mask"""
         if self.masked_temps.size == 0:
             return -1
         # take the 25 to 75 percentile mean to reduce the influence of noise and outliers
@@ -191,6 +200,7 @@ class KalmanBlob(object):
         return self.max_temp
 
     def outside_frame(self, frame_shape, margin = 3):
+        # check if the blob is outside the frame
         img_h, img_w = frame_shape
         x_min, y_min, x_max, y_max = self.get_state()
         if x_max < -margin or y_max < -margin or x_min > img_w + margin or y_min > img_h + margin:

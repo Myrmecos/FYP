@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from heat_patch_tracker_module.kalman_blob import KalmanBlob, mask_to_bbox
+from heat_patch_tracker_module.particle_blob import ParticleFilterBlob
+from heat_patch_tracker_module.utils import mask_to_bbox, bbox_to_centroid  
 from residual_heat_detection_module.residual_detect import ResidualHeatDetector
 from scipy.optimize import linear_sum_assignment, curve_fit
 
@@ -14,7 +15,7 @@ SIZE_THRESH = 100  # minimum size of heat source to be considered a blob
 
 class Tracker:
     def __init__(self):
-        self.blobs = []  # list of KalmanBlob objects
+        self.blobs = []  # list of ParticleFilterBlob objects
         self.residual_detector = ResidualHeatDetector()
         self.relations = dict() # adjacency list to track the relations between blobs
     
@@ -90,7 +91,11 @@ class Tracker:
         for r, c in matched_pairs:
             blob = self.blobs[r]
             mask = detected_heat_sources[c]
-            masked_temps = original_ira_img[mask.astype(bool)]
+            # print("DEBUG: mask values: ", np.unique(mask), " shape: ", mask.shape, "DEBUG A")
+            #masked_temps = original_ira_img[mask.astype(bool)] # we don't want to make masked_temp a 1D array
+            # we want to preserve a 2D array of the masked temps to compute the spatial distribution features for residual detection
+            masked_temps = original_ira_img * mask  # element-wise multiplication to keep the 2D shape, values outside mask will be zero and ignored in feature computation
+            # print("shape of mask; ", mask.shape, " shape of masked_temps: ", masked_temps.shape, "DEBUG A")
             blob.update(mask, masked_temps, True)
 
         # ========== B. Handle unmatched blobs and new detections ===========
@@ -112,7 +117,7 @@ class Tracker:
                 continue
 
             # ============ Case 2: New blob detected ============
-            new_blob = KalmanBlob(mask=mask, masked_temps=masked_temps)
+            new_blob = ParticleFilterBlob(mask=mask, masked_temps=masked_temps)
 
             # ======== check if residual is generated =========
             print("mean temp of new blob: ", new_blob.mean_temp)
@@ -162,10 +167,10 @@ class Tracker:
         """
         Verify the blobs' types (residual/human) based on their temperature history and movement patterns.
         """
-        # print("=========================")
+        print("=========================")
         TEMP_DECREASE_THRESH = -0.8  # threshold for temperature decrease trend
         for id, blob in enumerate(self.blobs):
-            # print("+++++++++++++++++++Blob ID: ", blob.id_fixed)
+            print("+++++++++++++++++++Blob ID: ", blob.id_fixed)
             blob.update_temp_trend() #update blob.temp_trend variable
             print("Blob ID: ", blob.id_fixed, " Temp: ", blob.temp_history, " Is residual: ", blob.is_residual)
             # if blob.temp_trend < TEMP_DECREASE_THRESH:
@@ -195,7 +200,7 @@ class Tracker:
                 end = max_temp_history_len - min_temp_history_len
                 seg1 = max_blob.temp_history[start:end]
                 seg2 = blob.temp_history[:]
-                # print("seg1: ", seg1, " seg2: ", seg2)
+                print("seg1: ", seg1, " seg2: ", seg2)
                 history = seg1
                 history.extend(seg2)
 
@@ -215,32 +220,29 @@ class Tracker:
                 # use the history to directly compute the correlation between time and temperature, if the correlation is strongly negative, it indicates a decreasing trend
                 # we want to detect the case where temperature is steadily and gradually decreasing, indicating heat residual
                 # but we don't want to classify a blob with a sharp decline as residual, because it could be human being occluded by blanket
-                if len(history) <= 30:
+                if len(history) <= 5:
                     continue
                 corr = np.corrcoef(np.arange(len(history)), history)[0, 1]
-                # print("Correlation between time and temp history: ", corr)
+                print("Correlation between time and temp history: ", corr)
     
                 # quantify if there exists a sharp decline in the temp history, which indicates a non-residual blob that is occluded by blanket
                 # sharp decline is defined as a drop of more than 5 degrees within 10 frames
-                for i in range(len(history)-20):
-                    if history[i] - history[i+20] > 3:
+                for i in range(len(history)-10):
+                    if history[i] - history[i+10] > 5:
                         corr = 0  # if there exists a sharp decline, we set k to 0 to avoid misclassifying occluded human as residual
                         print("Sharp decline detected in temp history, likely occluded human. Blob ID: ", blob.id_fixed)
                         break
                 
-
-                blob.corr = corr
                 if corr < TEMP_DECREASE_THRESH:
-                    print("classified as residual due to decreasing temp trend. Blob ID: ", blob.id_fixed)
                     blob.is_residual = True
                     blob.id = -1  # mark as residual blob
 
                 
                 velocity = blob.get_velocity()
-                # print("Blob ID: ", blob.id_fixed, " Temp history len: ", len(blob.temp_history), " Min temp history len: ", min_temp_history_len, " Sibling IDs: ", sibling_ids)
+                print("Blob ID: ", blob.id_fixed, " Temp history len: ", len(blob.temp_history), " Min temp history len: ", min_temp_history_len, " Sibling IDs: ", sibling_ids)
                 # print("k value:", k, "k > 0.1:", k>0.1)
-                # print("Velocity: ", velocity)
-                # print("is residual: ", blob.is_residual)
+                print("Velocity: ", velocity)
+                print("is residual: ", blob.is_residual)
                 
 
                 # if k > 0.1:
@@ -277,50 +279,88 @@ if __name__ == "__main__":
         from dataset import ThermalDataset
         from heatsource_detection_module.extract import HeatSourceDetector
         from data_visualization_module.plot import DataVisualizer, stitch_images
+        import cv2
+        import numpy as np
+
         datavisualizer = DataVisualizer()
         dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall1")
         detector = HeatSourceDetector()
         tracker = Tracker()
 
-        indices = range(18230, 18265)
-        indices = range(18200, len(dataset), 1) # test on all frames in the dataset
+        # indices = range(1831, len(dataset), 1)
+        indices = range(18200, len(dataset), 1)
 
-        for idx in indices: #18115
+        for idx in indices:
             ira_highres = dataset.get_ira_highres(idx)
             thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
             mask_processed = detector.process_frame_mask(ira_highres, min_size=200)
             mask_individual = detector.process_frame_connected_components(ira_highres, min_size=200)
-            # cleaned_mask = detector.get_connected_components(mask, min_size=200)
+
             print(len(mask_individual), "heat sources detected in frame", idx)
             tracker.update_blobs(mask_individual, ira_highres, detector.get_unmasked_mean(ira_highres, mask))
 
-            # visualize the blobs and their centroids on the original IRA high-res image and the mask
+            # Prepare images for visualization
             ira_highres_color = datavisualizer._prepare_thermal_for_colormap(ira_highres)
             ira_highres_color = cv2.applyColorMap(ira_highres_color, cv2.COLORMAP_JET)
             map_color = datavisualizer._prepare_thermal_for_colormap(mask_processed.astype('uint8') * 255)
             map_color = cv2.applyColorMap(map_color, cv2.COLORMAP_JET)
+
             scaling_factor = 10
             ira_highres_color = cv2.resize(ira_highres_color, (0, 0), fx=scaling_factor, fy=scaling_factor)
             map_color = cv2.resize(map_color, (0, 0), fx=scaling_factor, fy=scaling_factor)
-            # plot the centroid of each blob on the IRA high-res image
-            for i, blob in enumerate(tracker.blobs):
-                if not blob.kalman_centroid_history:  # check if history is not empty
-                    continue
-                idx = blob.id_fixed
-                centroid = blob.kalman_centroid_history[-1]  # get the latest centroid
-                cv2.circle(ira_highres_color, (int(centroid[0] * scaling_factor), int(centroid[1] * scaling_factor)), 5, (0, 0, 0), -1)  # draw centroid on image with radiu 5
-                cv2.putText(ira_highres_color, f'Blob {idx}: is residual: {blob.is_residual}', (int(centroid[0] * scaling_factor) -5, int(centroid[1] * scaling_factor) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-                cv2.circle(map_color, (int(centroid[0] * scaling_factor), int(centroid[1] * scaling_factor)), 5, (0, 0, 0), -1)  # also plot on mask color map for better visibility
-                cv2.putText(map_color, f'Blob {idx}: {round(blob.temp_trend, 2)}', (int(centroid[0] * scaling_factor) + 5, int(centroid[1] * scaling_factor) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-            
-            # cv2.imshow("IRA High-Res with Blob Centroids", ira_highres_color)
-            # cv2.waitKey(0) 
-            # stich the original IRA high-res and the color map of detected blobs side by side for better visualization
-            print("number of blobs found: ", len(tracker.blobs))
+
+            # === NEW: Visualize particles for each blob ===
+            for blob in tracker.blobs:
+                if not hasattr(blob, 'particles') or len(blob.particles) == 0:
+                    continue  # skip if it's still a KalmanBlob or particles not initialized
+
+                idx_id = blob.id_fixed
+                color = tuple(np.random.randint(0, 255, 3).tolist())  # random color per blob
+
+                # Draw all particles (small dots + thin rectangles)
+                for p in blob.particles:
+                    cx, cy, w, h = p[0:4]
+                    # Scale to resized image
+                    cx_s = int(cx * scaling_factor)
+                    cy_s = int(cy * scaling_factor)
+                    w_s = int(w * scaling_factor)
+                    h_s = int(h * scaling_factor)
+
+                    # Particle position (dot)
+                    cv2.circle(ira_highres_color, (cx_s, cy_s), 2, color, -1)
+                    cv2.circle(map_color, (cx_s, cy_s), 2, color, -1)
+
+                    # Particle predicted size (thin rectangle)
+                    x1 = int(cx_s - w_s / 2)
+                    y1 = int(cy_s - h_s / 2)
+                    cv2.rectangle(ira_highres_color, (x1, y1), (x1 + w_s, y1 + h_s), color, 1)
+                    cv2.rectangle(map_color, (x1, y1), (x1 + w_s, y1 + h_s), color, 1)
+
+                # Draw the MEAN state (final tracked result) with thicker line + label
+                mean_bbox = blob.get_state()  # [x1, y1, x2, y2]
+                mean_x1 = int(mean_bbox[0] * scaling_factor)
+                mean_y1 = int(mean_bbox[1] * scaling_factor)
+                mean_x2 = int(mean_bbox[2] * scaling_factor)
+                mean_y2 = int(mean_bbox[3] * scaling_factor)
+
+                cv2.rectangle(ira_highres_color, (mean_x1, mean_y1), (mean_x2, mean_y2), (0, 255, 0), 3)
+                cv2.rectangle(map_color, (mean_x1, mean_y1), (mean_x2, mean_y2), (0, 255, 0), 3)
+
+                # Centroid + label
+                centroid = blob.get_position()
+                cx_s = int(centroid[0] * scaling_factor)
+                cy_s = int(centroid[1] * scaling_factor)
+                cv2.circle(ira_highres_color, (cx_s, cy_s), 6, (0, 255, 0), -1)
+                cv2.putText(ira_highres_color, f'Blob {idx_id}', 
+                            (cx_s + 10, cy_s - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+
+            print("number of blobs found:", len(tracker.blobs))
             combined_vis = stitch_images([ira_highres_color, map_color])
-            cv2.imshow("Combined Visualization", combined_vis)
-            cv2.waitKey(0)
-            
+            cv2.imshow("Combined Visualization with Particles", combined_vis)
+            key = cv2.waitKey(0)
+            if key == 27:  # ESC to exit
+                break
+
     plot_trajectory_on_img()
 
     def plot_trajectory():
