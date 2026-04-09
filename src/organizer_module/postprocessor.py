@@ -220,7 +220,7 @@ if __name__ == "__main__":
         #   5.1. visualize the presence detection result for each frame, and compare with the ground truth label
         #   5.2. visualize the blob classification result for each frame, and compare with the ground truth label
 
-    test_postprocessor()
+    # test_postprocessor()
     
     def test_results():
         import matplotlib.pyplot as plt
@@ -258,10 +258,27 @@ if __name__ == "__main__":
         accuracy = correct / total
         print(f"Accuracy: {accuracy:.4f}")
         #print acc and recall and F1 score for pose classification
-        from sklearn.metrics import classification_report
-        # resutls and gt_rersult_lst are both a list of pose labels
-        # target_names=['Absence', 'Presence', 'Standing', 'Sitting by Bed', 'Sitting on Bed', 'Lying w/o Cover', 'Lying with Cover']
-        print(classification_report(gt_result_lst, results))
+        # plot confusion matrix
+        from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+        y_true = [1 if r in [2, 3, 4, 5, 6] else 0 for r in gt_result_lst]
+        y_pred = [1 if r in [2, 3, 4, 5, 6] else 0 for r in results]
+        cm = confusion_matrix(y_true, y_pred)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['No Human', 'Human'])
+        disp.plot(cmap=plt.cm.Blues)
+        plt.title("Confusion Matrix for Posture Classification (Binary)")
+        plt.show()
+        # plot posture classification confusion matrix
+        # remove ambiguous labels in gt_result_lst and results
+        y_true = [r for r in gt_result_lst if r != -1 and r != 1]
+        y_pred = [results[i] for i in range(len(results)) if gt_result_lst[i] != -1 and gt_result_lst[i] != 1]
+        cm = confusion_matrix(y_true, y_pred, labels=[0, 2, 3, 4, 5, 6])
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['No Human', 'Standing', 'Sitting by Bed', 'Sitting on Bed', 'Lying w/o Cover', 'Lying with Cover'])
+        disp.plot(cmap=plt.cm.Blues)
+        # rotate x label by 45 degree
+        plt.xticks(rotation=45)
+        plt.title("Confusion Matrix for Posture Classification (Detailed)")
+        plt.show()
+
 
     test_results()
 
