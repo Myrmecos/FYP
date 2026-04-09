@@ -149,6 +149,8 @@ if __name__ == "__main__":
         # 3. loop through each fraome
         for idx in range(0, len(dataset)):
             label = dataset.annotations_expanded[idx]
+            if label == -1:
+                 continue
             gt_result_lst.append(label)
             ira_highres = dataset.get_ira_highres(idx)
             #   3.1. detect heat source
@@ -220,7 +222,7 @@ if __name__ == "__main__":
         #   5.1. visualize the presence detection result for each frame, and compare with the ground truth label
         #   5.2. visualize the blob classification result for each frame, and compare with the ground truth label
 
-    # test_postprocessor()
+    test_postprocessor()
     
     def test_results():
         import matplotlib.pyplot as plt
