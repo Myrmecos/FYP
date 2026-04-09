@@ -52,10 +52,99 @@ class PostProcessor:
         pass
 
     def _markov_smoothing(self):
-        # use the Viterbi algorithm to find the most likely sequence of postures given the observed posture_records and the transition probabilities between postures
-        # do something with the posture records!
-        self.posture_records = self.posture_records
-        pass
+        """
+        Use the Viterbi algorithm to find the most likely sequence of postures given the observed posture_records.
+        Hidden states: 0 (absence), 1 (presence unclassified), 2 (standing), 3 (sitting by bed),
+                       4 (sitting on bed), 5 (lying without cover), 6 (lying with cover)
+        Observations: 0, 2, 3, 4, 5, 6 (no observation for state 1 - it acts as a "transition" state)
+        """
+        import numpy as np
+
+        observations = np.array(self.posture_records)
+        n_obs = len(observations)
+
+        # Define states
+        STATES = [0, 1, 2, 3, 4, 5, 6]
+        OBSERVATIONS = [0, 2, 3, 4, 5, 6]
+        STATE_TO_IDX = {s: i for i, s in enumerate(STATES)}
+        OBS_TO_IDX = {o: i for i, o in enumerate(OBSERVATIONS)}
+
+        # Load GT data to estimate transition and emission probabilities
+        import json
+        from pathlib import Path
+        output_dir = Path(__file__).parent.parent.parent / "output"
+        with open(output_dir / "office1_0.json", 'r') as f:
+            data = json.load(f)
+            gt = np.array(data['gt_result_lst'])
+            obs_data = np.array(data['results'])
+
+        # Estimate transition probabilities from GT
+        # P(true_state_t | true_state_{t-1})
+        transition_counts = np.ones((7, 7))  # Laplace smoothing
+        for i in range(1, len(gt)):
+            prev_state = gt[i - 1]
+            curr_state = gt[i]
+            transition_counts[prev_state, curr_state] += 1
+
+        # Normalize to get transition probabilities
+        trans_probs = transition_counts / transition_counts.sum(axis=1, keepdims=True)
+
+        # Estimate emission probabilities from the data
+        # P(observed_state | true_state)
+        emission_counts = np.ones((7, 6))  # Laplace smoothing (6 possible observations)
+        for i in range(n_obs):
+            true_state = gt[i]
+            obs = observations[i]
+            if obs in OBSERVATIONS:
+                obs_idx = OBS_TO_IDX[obs]
+                emission_counts[true_state, obs_idx] += 1
+
+        # Normalize to get emission probabilities
+        emission_probs = emission_counts / emission_counts.sum(axis=1, keepdims=True)
+
+        # Prior probabilities (initial state distribution)
+        prior_counts = np.ones(7)
+        prior_counts[gt[0]] += 1
+        prior_probs = prior_counts / prior_counts.sum()
+
+        # Viterbi algorithm
+        n_states = 7
+        T = n_obs
+
+        # viterbi[n_states][T] = log probability
+        viterbi = np.full((n_states, T), -np.inf)
+        backpointer = np.full((n_states, T), -1, dtype=int)
+
+        # Initialize
+        for s in range(n_states):
+            if observations[0] in OBSERVATIONS:
+                obs_idx = OBS_TO_IDX[observations[0]]
+                viterbi[s, 0] = np.log(prior_probs[s]) + np.log(emission_probs[s, obs_idx])
+            else:
+                viterbi[s, 0] = np.log(prior_probs[s])
+
+        # Forward pass
+        for t in range(1, T):
+            obs = observations[t]
+            obs_idx = OBS_TO_IDX[obs] if obs in OBSERVATIONS else -1
+            for s in range(n_states):
+                if obs_idx >= 0:
+                    obs_prob = emission_probs[s, obs_idx]
+                else:
+                    obs_prob = 1.0  # State 1 (unclassified) doesn't emit
+                if obs_prob <= 0:
+                    obs_prob = 1e-10
+                best_prev = np.argmax(viterbi[:, t - 1] + np.log(trans_probs[:, s]))
+                viterbi[s, t] = viterbi[best_prev, t - 1] + np.log(trans_probs[best_prev, s]) + np.log(obs_prob)
+                backpointer[s, t] = best_prev
+
+        # Backtrack
+        best_path = np.zeros(T, dtype=int)
+        best_path[T - 1] = np.argmax(viterbi[:, T - 1])
+        for t in range(T - 2, -1, -1):
+            best_path[t] = backpointer[best_path[t + 1], t + 1]
+
+        self.posture_records = best_path.tolist()
 
     def _state_machine_smoothing(self):
         # define a state machine with states corresponding to the postures, and transitions based on the observed posture_records and the presence of blobs in each frame
@@ -228,6 +317,9 @@ if __name__ == "__main__":
     
     def test_results():
         import matplotlib.pyplot as plt
+        from organizer_module.postprocessor import PostProcessor
+        import numpy as np
+
         # load from json
         with open(f'/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/output/{data_name}.json', 'r') as f:
             data = json.load(f)
@@ -237,11 +329,38 @@ if __name__ == "__main__":
         print("DEBUG: results: ", len(results))
         print("DEBUG: gt_result_lst: ", len(gt_result_lst))
 
-        # # plot the results (posture sequences)
-        # plt.plot(results, label='Predicted Posture')
-        # plt.plot(gt_result_lst, label='Ground Truth Posture')
-        # plt.legend()
-        # plt.show()
+        # Apply Markov smoothing to the results
+        pp = PostProcessor()
+        pp.posture_records = results.copy()
+        pp._markov_smoothing()
+        smoothed_results = pp.posture_records
+
+        def compute_accuracy(pred, gt):
+            correct = 0
+            total = 0
+            for i in range(len(gt)):
+                g = gt[i]
+                p = pred[i]
+                if g == -1:
+                    g = 0
+                if g == 1:
+                    if p in [2, 3, 4, 5, 6]:
+                        correct += 1
+                else:
+                    if p == g:
+                        correct += 1
+                total += 1
+            return correct / total
+
+        accuracy_before = compute_accuracy(results, gt_result_lst)
+        accuracy_after = compute_accuracy(smoothed_results, gt_result_lst)
+
+        print("DEBUG: smoothed results: ", len(smoothed_results))
+        plt.plot(smoothed_results)
+        plt.plot(gt_result_lst)
+        plt.show()
+        print(f"Accuracy before smoothing: {accuracy_before:.4f}")
+        print(f"Accuracy after smoothing: {accuracy_after:.4f}")
 
         # count the accuracy
         # when gt_results_lst is -1, we regard it as 0
