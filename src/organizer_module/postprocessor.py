@@ -53,6 +53,8 @@ class PostProcessor:
 
     def _markov_smoothing(self):
         # use the Viterbi algorithm to find the most likely sequence of postures given the observed posture_records and the transition probabilities between postures
+        # do something with the posture records!
+        self.posture_records = self.posture_records
         pass
 
     def _state_machine_smoothing(self):
@@ -222,7 +224,7 @@ if __name__ == "__main__":
         #   5.1. visualize the presence detection result for each frame, and compare with the ground truth label
         #   5.2. visualize the blob classification result for each frame, and compare with the ground truth label
 
-    test_postprocessor()
+    # test_postprocessor()
     
     def test_results():
         import matplotlib.pyplot as plt
@@ -235,11 +237,13 @@ if __name__ == "__main__":
         print("DEBUG: results: ", len(results))
         print("DEBUG: gt_result_lst: ", len(gt_result_lst))
 
-        plt.plot(results, label='Predicted Posture')
-        plt.plot(gt_result_lst, label='Ground Truth Posture')
-        plt.legend()
-        plt.show()
+        # # plot the results (posture sequences)
+        # plt.plot(results, label='Predicted Posture')
+        # plt.plot(gt_result_lst, label='Ground Truth Posture')
+        # plt.legend()
+        # plt.show()
 
+        # count the accuracy
         # when gt_results_lst is -1, we regard it as 0
         # when gt_results_lst is 1, it can match all the presence labels (2, 3, 4, 5, 6)
         # compute the accuracy
@@ -259,27 +263,34 @@ if __name__ == "__main__":
             total += 1
         accuracy = correct / total
         print(f"Accuracy: {accuracy:.4f}")
-        #print acc and recall and F1 score for pose classification
+
+
         # plot confusion matrix
         from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+        # presence classification confusion matrix
         y_true = [1 if r in [2, 3, 4, 5, 6] else 0 for r in gt_result_lst]
         y_pred = [1 if r in [2, 3, 4, 5, 6] else 0 for r in results]
         cm = confusion_matrix(y_true, y_pred)
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['No Human', 'Human'])
-        disp.plot(cmap=plt.cm.Blues)
-        plt.title("Confusion Matrix for Posture Classification (Binary)")
-        plt.show()
+        print("Confusion Matrix for Presence Classification:", cm)
+
+        # disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['No Human', 'Human'])
+        # disp.plot(cmap=plt.cm.Blues)
+        # plt.title("Confusion Matrix for Presence Classification (Binary)")
+        # plt.show()
+
         # plot posture classification confusion matrix
         # remove ambiguous labels in gt_result_lst and results
         y_true = [r for r in gt_result_lst if r != -1 and r != 1]
         y_pred = [results[i] for i in range(len(results)) if gt_result_lst[i] != -1 and gt_result_lst[i] != 1]
         cm = confusion_matrix(y_true, y_pred, labels=[0, 2, 3, 4, 5, 6])
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['No Human', 'Standing', 'Sitting by Bed', 'Sitting on Bed', 'Lying w/o Cover', 'Lying with Cover'])
-        disp.plot(cmap=plt.cm.Blues)
-        # rotate x label by 45 degree
-        plt.xticks(rotation=45)
-        plt.title("Confusion Matrix for Posture Classification (Detailed)")
-        plt.show()
+        print("Confusion Matrix for Posture Classification (Detailed):", cm)
+
+        # disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['No Human', 'Standing', 'Sitting by Bed', 'Sitting on Bed', 'Lying w/o Cover', 'Lying with Cover'])
+        # disp.plot(cmap=plt.cm.Blues)
+        # # rotate x label by 45 degree
+        # plt.xticks(rotation=45)
+        # plt.title("Confusion Matrix for Posture Classification (Detailed)")
+        # plt.show()
 
 
     test_results()
