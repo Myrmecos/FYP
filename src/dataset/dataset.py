@@ -83,14 +83,16 @@ class ThermalDatasetAggregator():
         return self.datasets[dataset_index].get_tof(index)
 
 class ThermalDataset(dataset.Dataset):
-    def __init__(self, dataset_base_dir):
+    def __init__(self, dataset_base_dir, noCam = False):
         self.dataset_base_dir = dataset_base_dir
         self.camera_dir = os.path.join(dataset_base_dir, "Camera")
         self.ira_dir = os.path.join(dataset_base_dir, "IRA")
         self.tof_dir = os.path.join(dataset_base_dir, "ToF")
         self.annotation_path = os.path.join(dataset_base_dir, "annotation.yaml")
+        self.noCam = noCam
 
-        self.img_files = sorted([f for f in os.listdir(self.camera_dir) if f.endswith('.png') or f.endswith('.jpg')])
+        if not noCam:
+            self.img_files = sorted([f for f in os.listdir(self.camera_dir) if f.endswith('.png') or f.endswith('.jpg')])
         self.ira_files = sorted([f for f in os.listdir(self.ira_dir) if f.endswith('.pkl')])
         # ira_highres_files = sorted([f for f in os.listdir(ira_highres_dir) if f.endswith('.pkl')])
         self.tof_files = sorted([f for f in os.listdir(self.tof_dir) if f.endswith('.pkl')])
@@ -98,7 +100,10 @@ class ThermalDataset(dataset.Dataset):
         self.process_annotations()
     
     def __getitem__(self, index):
-        img = self.get_image(index)
+        if not self.noCam:
+            img = self.get_image(index)
+        else:
+            img = None
         ira = self.get_ira(index)
         ira_highres = self.get_ira_highres(index)
         tof = self.get_tof(index)
@@ -160,8 +165,15 @@ class ThermalDataset(dataset.Dataset):
                     self.annotations_expanded[i] = 6
         except:
             print("problems with annotation format. Please check the annotation.yaml file. All frames will be labeled as -1 (unknown).")
+            # print error mesasge
+            print("problem set name: ", self.dataset_base_dir)
+            import traceback
+            traceback.print_exc()
     def __len__(self):
-        lngth = min(len(self.img_files), len(self.ira_files), len(self.tof_files))
+        if self.noCam:
+            lngth = min(len(self.ira_files), len(self.tof_files))
+        else:
+            lngth = min(len(self.img_files), len(self.ira_files), len(self.tof_files))
         return lngth
     
     def get_annotation(self, index):

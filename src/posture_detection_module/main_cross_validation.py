@@ -204,7 +204,7 @@ def run_cross_env(train_envs, test_envs):
 
         print(f"\n  Test on {env_key}:")
         model = SimpleIRA_CNN(num_classes=len(label_to_index))
-        train_model(model, train_loader, val_loader, label_to_index, num_epochs=5, learning_rate=1e-3)
+        train_model(model, train_loader, val_loader, label_to_index, num_epochs=15, learning_rate=1e-3)
         torch.save(model.state_dict(), f'/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/weights/posture_cnn_cross_env_{env_key}.pth')
         results = test_model(model, test_loader, label_to_index)
 
@@ -241,6 +241,37 @@ def run_cross_user(train_users, test_users):
             f'/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/weights/posture_cnn_cross_user_{user_key}.pth')
         train_model(model, train_loader, val_loader, label_to_index, num_epochs=2, learning_rate=1e-3)
         results = test_model(model, test_loader, label_to_index)
+
+def simple_train(train_envs, train_users, test_envs, test_users):
+    # load all data from all users and envs
+    train_tuples_envs = load_datasets_for_envs(train_envs, label_to_index) # [('env0', <torch.utils.data.dataset.Subset object at 0x3027f56c0>), ('env1', <torch.utils.data.dataset.Subset object at 0x3027f55a0>), ...
+    train_tuples_users = load_datasets_for_users(train_users, label_to_index)
+    test_tuples_envs = load_datasets_for_envs(test_envs, label_to_index)
+    test_tuples_users = load_datasets_for_users(test_users, label_to_index)
+
+    # combine all dataset into one train set
+    train_tuples = train_tuples_envs + train_tuples_users + test_tuples_envs + test_tuples_users
+    # train_tuples = test_tuples_users
+
+    # train on all data, test on all data (just to check if the model can learn something)
+    train_entries, val_entries, _ = combine_and_split(train_tuples)
+    #
+    train_loader = create_dataloaders_from_entries(train_entries)
+    val_loader = create_dataloaders_from_entries(val_entries)    
+    model = SimpleIRA_CNN(num_classes=len(label_to_index))
+    # print train loader last batch labels to check if the data is loaded correctly
+    for batch in train_loader:
+        print("Train batch labels:", batch[1])
+        break
+    train_model(model, train_loader, val_loader, label_to_index, num_epochs=15, learning_rate=1e-3)
+
+    # save to /Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/weights/all.pth
+    torch.save(model.state_dict(),f'/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/weights/posture_cnn_all_full.pth')
+
+
+
+    print("simple train:")
+    print(train_tuples)
 
 
 def run_cross_user_and_env(train_envs, test_envs, train_users, test_users):
@@ -287,8 +318,11 @@ if __name__ == '__main__':
     print("Running cross-validation experiments")
     print("="*60)
 
+    simple_train(train_envs, train_users, test_envs, test_users)
+    # data = ThermalDataset('/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall_lsb_1')
+
     # Run cross-environment experiment
-    run_cross_env(train_envs, test_envs)
+    # run_cross_env(train_envs, test_envs)
 
     # Run cross-user experiment
     # run_cross_user(train_users, test_users)

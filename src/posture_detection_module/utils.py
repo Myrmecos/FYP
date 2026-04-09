@@ -39,7 +39,8 @@ def remap_labels(labels, label_to_index=label_to_index, device='cpu'):
     labels_tensor = torch.as_tensor(labels)
     if labels_tensor.dim() == 0 or labels_tensor.numel() == 1:
         print("DEBUG: int(labels): ", int(labels))
-        return torch.tensor(label_to_index[int(labels)], dtype=torch.long, device=device)
+        # return torch.tensor(label_to_index[int(labels)], dtype=torch.long, device=device)
+        return torch.tensor([label_to_index[int(labels)]], dtype=torch.long, device=device)
     return torch.tensor(
         [label_to_index[int(label)] for label in labels],
         dtype=torch.long,

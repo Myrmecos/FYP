@@ -147,8 +147,30 @@ class PostProcessor:
         self.posture_records = best_path.tolist()
 
     def _state_machine_smoothing(self):
-        # define a state machine with states corresponding to the postures, and transitions based on the observed posture_records and the presence of blobs in each frame
-        pass
+        """
+        Apply rule-based state machine smoothing to posture records.
+        Uses majority voting within a sliding window to decide the state for each frame.
+        """
+        import numpy as np
+        WINDOW_SIZE = 5  # window for majority voting
+
+        records = np.array(self.posture_records)
+        n = len(records)
+        smoothed = np.zeros(n, dtype=int)
+
+        # For each frame, look at surrounding frames and take majority vote
+        half = WINDOW_SIZE // 2
+        for i in range(n):
+            start = max(0, i - half)
+            end = min(n, i + half + 1)
+            window = records[start:end]
+            # Count each unique value in the window
+            values, counts = np.unique(window, return_counts=True)
+            # Use argmax to get most common value (np.unique returns sorted values)
+            majority_idx = np.argmax(counts)
+            smoothed[i] = values[majority_idx]
+
+        self.posture_records = smoothed.tolist()
 
     def output_results(self, output_path = "blob_records.json"):
         out = dict()
@@ -184,7 +206,7 @@ if __name__ == "__main__":
 
     dv = DataVisualizer()
 
-    def visualize_frame(ira, blobs, posture_label, index):
+    def visualize_frame(ira, blobs, posture_label, index, waittime = 0):
         # visualize the blobs and posture label on the ira_highres image, and save the image to disk
         thermal_prepared = dv._prepare_thermal_for_colormap(ira)
         ira_color = cv2.applyColorMap(thermal_prepared, cv2.COLORMAP_JET)
@@ -192,35 +214,41 @@ if __name__ == "__main__":
         scale_factor = 10
         ira_color = cv2.resize(ira_color, (ira_color.shape[1] * scale_factor, ira_color.shape[0] * scale_factor), interpolation=cv2.INTER_NEAREST)
 
+        corr = 0
+
         # plot the blobs on the image, use green circle for human and yellow circle for residual heat
         for blob in blobs:
             if blob.mean_temp is None or blob.centroid is None:
                 continue
             color = (0, 255, 0) if blob.is_residual == False else (0, 255, 255)
             # cv2.circle(ira_color, (int(blob.centroid[1]), int(blob.centroid[0])), 10, color, 2)
-            # draw bbox
+            # mark the blob id on the image
             x_min, y_min, x_max, y_max = blob.get_state()
+            cv2.putText(ira_color, f'ID: {blob.id_fixed}', (int(x_min*scale_factor), int(y_min*scale_factor)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+            cv2.putText(ira_color, f'corr: {blob.corr:.1f}', (int(x_min*scale_factor), int((y_min+15)*scale_factor)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+            # draw bbox
+            corr = blob.corr
             x_min = int(x_min * scale_factor)
             y_min = int(y_min * scale_factor)
             x_max = int(x_max * scale_factor)
             y_max = int(y_max * scale_factor)
             cv2.rectangle(ira_color, (x_min, y_min), (x_max, y_max), color, 2)
 
-        cv2.putText(ira_color, f'Frame: {index}| Posture: {posture_label}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        cv2.putText(ira_color, f'Frame: {index}| Posture: {posture_label}|Corr: {corr:.3f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         cv2.imshow('ira', ira_color)
-        key = cv2.waitKey(1)
+        key = cv2.waitKey(waittime)
         if key == ord('q'):
             cv2.destroyAllWindows()
             sys.exit(0)
         # cv2.destroyAllWindows()
 
-    data_name = "office1_0"
+    data_name = "office0_3"
 
     def test_postprocessor():
         # use a data entry as test: /Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall5
         # 1. load the dataset
         # dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office1_0")
-        dataset = ThermalDataset(f"/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/{data_name}")
+        dataset = ThermalDataset(f"/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/{data_name}", noCam = True)
         # 2. initialize our system's components ==================================
         #   2.1. heatsource detection module: load the module
         heat_detector = HeatSourceDetector()
@@ -228,7 +256,7 @@ if __name__ == "__main__":
         #   2.1. posture detector module: load the model
         posture_detector_model = SimpleIRA_CNN()
         # load the pretrained weights for posture detection model
-        posture_detector_model.load_state_dict(torch.load('/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/weights/posture_cnn_cross_env_env5.pth'))
+        posture_detector_model.load_state_dict(torch.load('/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/weights/all_current_data.pth'))
         #   2.2. kalman tracker module: load the module
         tracker = Tracker()
         #   2.4. postprocessor module: load the module
@@ -236,12 +264,16 @@ if __name__ == "__main__":
         
         gt_result_lst = []
 
+        print("dataset length: ", len(dataset))
 
+        waittime = 1
         # 3. loop through each fraome
-        for idx in range(0, len(dataset)):
+        for idx in range(0, len(dataset), 1):
+            # if idx == 8720:
+            #     waittime = 0
             label = dataset.annotations_expanded[idx]
-            if label == -1:
-                 continue
+            # if label == -1:
+            #      continue
             gt_result_lst.append(label)
             ira_highres = dataset.get_ira_highres(idx)
             #   3.1. detect heat source
@@ -272,7 +304,7 @@ if __name__ == "__main__":
                 postprocessor.get_posture(0, idx)
             
             # visualize the result for this frame
-            visualize_frame(ira_highres, tracker.blobs, posture_str, idx)
+            visualize_frame(ira_highres, tracker.blobs, posture_str, idx, waittime)
         
         print("DEBUG: posture records: ", len(postprocessor.posture_records), len(gt_result_lst))
 
@@ -313,7 +345,7 @@ if __name__ == "__main__":
         #   5.1. visualize the presence detection result for each frame, and compare with the ground truth label
         #   5.2. visualize the blob classification result for each frame, and compare with the ground truth label
 
-    # test_postprocessor()
+    test_postprocessor()
     
     def test_results():
         import matplotlib.pyplot as plt
@@ -332,7 +364,7 @@ if __name__ == "__main__":
         # Apply Markov smoothing to the results
         pp = PostProcessor()
         pp.posture_records = results.copy()
-        pp._markov_smoothing()
+        # pp._markov_smoothing()
         smoothed_results = pp.posture_records
 
         def compute_accuracy(pred, gt):
@@ -356,8 +388,9 @@ if __name__ == "__main__":
         accuracy_after = compute_accuracy(smoothed_results, gt_result_lst)
 
         print("DEBUG: smoothed results: ", len(smoothed_results))
-        plt.plot(smoothed_results)
-        plt.plot(gt_result_lst)
+        plt.plot(smoothed_results, alpha = 0.5)
+        # plt.plot(results, alpha = 0.5)
+        # plt.plot(gt_result_lst, alpha = 0.5)
         plt.show()
         print(f"Accuracy before smoothing: {accuracy_before:.4f}")
         print(f"Accuracy after smoothing: {accuracy_after:.4f}")

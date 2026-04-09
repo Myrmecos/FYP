@@ -73,14 +73,14 @@ class KalmanBlob(object):
         self.queue_len = 400 # length of history to keep, longer history for better analysis
 
         self.bbox = mask_to_bbox(mask) if mask is not None else [0,0,0,0]
-        self.kf = KalmanFilter(dim_x=7, dim_z=4)
+        self.kf = KalmanFilter(dim_x=7, dim_z=4) # kalman filter state: [x, y, s, r, vx, vy, vs], measurement: [x, y, s, r]. s is scale (area). r is aspect ratio. vs is the rate of change of area,
         self.kf.F = np.array(
             [[1, 0, 0, 0, 1, 0, 0], [0, 1, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 0, 1], [0, 0, 0, 1, 0, 0, 0],
              [0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 1]])
         self.kf.H = np.array(
             [[1, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0]])
         
-        self.kf.R[2:, 2:] *= 1.   # 10.
+        self.kf.R[2:, 2:] *= 1.   # 10. 
         self.kf.P[4:, 4:] *= 10.  # 1000. # give high uncertainty to the unobservable initial velocities
         self.kf.P *= 10.
         self.kf.Q[-1, -1] *= 0.01
@@ -134,6 +134,12 @@ class KalmanBlob(object):
         # return the velocity based on Kalman filter state
         # vel is the absolute values
         return np.linalg.norm([self.kf.x[4], self.kf.x[5]])
+    
+    def get_bbox_change_velocity(self):
+        # return the velocity of bbox change, which can indicate if the blob is changing shape rapidly (like human) or not (like residual)
+        # use state x to retrieve the bbox change vel
+        return self.kf.x[6]
+
     
     def predict(self):
         """

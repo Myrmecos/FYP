@@ -11,6 +11,7 @@ from scipy.optimize import linear_sum_assignment, curve_fit
 
 HUNG_THRESH = 0.2  # minimum score for match acceptance
 SIZE_THRESH = 100  # minimum size of heat source to be considered a blob
+HUMAN_ENV_THRESH = 4
 
 class Tracker:
     def __init__(self):
@@ -108,7 +109,7 @@ class Tracker:
             heatsource_size = np.sum(mask.astype(bool))
             # =========== Case 1: Noise or insignificant heat source ===========
             # print("DEBUG:avg temp too low ", avg_temp < background_avg + 3, "; heatsource size too small ", heatsource_size < SIZE_THRESH)
-            if avg_temp < background_avg + 3 or heatsource_size < SIZE_THRESH:  # threshold to filter out noise
+            if avg_temp < background_avg + HUMAN_ENV_THRESH  or heatsource_size < SIZE_THRESH:  # threshold to filter out noise
                 continue
 
             # ============ Case 2: New blob detected ============
@@ -164,6 +165,9 @@ class Tracker:
         """
         # print("=========================")
         TEMP_DECREASE_THRESH = -0.8  # threshold for temperature decrease trend
+
+
+        # ============================ MAIN LOGIC for determining if a blob is residual ============================
         for id, blob in enumerate(self.blobs):
             # print("+++++++++++++++++++Blob ID: ", blob.id_fixed)
             blob.update_temp_trend() #update blob.temp_trend variable
@@ -176,7 +180,7 @@ class Tracker:
             # we can estimate k from the temp history and determine if the blob is residual based on whether the estimated k is above a certain threshold
             if len(blob.temp_history) >= 5:
                 sibling_ids = self.relations.get(blob.id_fixed, set())
-                min_temp_history_len = len(blob.temp_history)
+                current_temp_history_len = len(blob.temp_history)
                 max_temp_history_len = len(blob.temp_history)
                 min_blob = blob
                 max_blob = blob
@@ -184,42 +188,37 @@ class Tracker:
                     sibling = self.find_sibling(sibling_id)
                     if sibling is None:
                         continue
-                    if min_temp_history_len > len(sibling.temp_history):
-                        min_temp_history_len = len(sibling.temp_history)
-                        min_blob = sibling
+                    # if min_temp_history_len > len(sibling.temp_history):
+                    #     min_temp_history_len = len(sibling.temp_history)
+                    #     min_blob = sibling
                     if max_temp_history_len < len(sibling.temp_history):
                         max_temp_history_len = len(sibling.temp_history)
                         max_blob = sibling
-                    
-                start = max(0, max_temp_history_len - min_temp_history_len - 20)  # get the last 20 frames of temp history for fitting
-                end = max_temp_history_len - min_temp_history_len
+
+                # appending the temp history of the sibling to the current blob
+                # to obtain a more complete temp history for robust estimation of temp trend
+                start = max(0, max_temp_history_len - current_temp_history_len - 10)  # get the last 20 frames of temp history for fitting
+                end = max_temp_history_len - current_temp_history_len
                 seg1 = max_blob.temp_history[start:end]
                 seg2 = blob.temp_history[:]
                 # print("seg1: ", seg1, " seg2: ", seg2)
                 history = seg1
                 history.extend(seg2)
+                history = history[-40:]  # only keep the last 40 frames of history to capture the recent trend, which is more relevant for determining if it's residual
+                # otherwise we risk classifying residual as a human (longer history, more coverage, k is not captured correctly)
 
 
-                # k = -np.log(blob.temp_history[-1] / blob.temp_history[-5]) / 5
-                # fit k according to previous temp history, using curve fitting
-                # def temp_func(t, k):
-                #     return background_temp + (blob.temp_history[0] - background_temp) * np.exp(-k * t)
-                # try:
-                #     t = np.arange(len(blob.temp_history))
-                #     popt, pcov = curve_fit(temp_func, t, history, bounds=(0, 1))
-                #     k = popt[0]
-                #     blob.k = k
-                # except:
-                #     k = 0
 
+                print("Blob ID: ", blob.id_fixed, " temp: ", blob.temp_history[-1])
                 # use the history to directly compute the correlation between time and temperature, if the correlation is strongly negative, it indicates a decreasing trend
                 # we want to detect the case where temperature is steadily and gradually decreasing, indicating heat residual
                 # but we don't want to classify a blob with a sharp decline as residual, because it could be human being occluded by blanket
                 if len(history) <= 30:
                     continue
-                corr = np.corrcoef(np.arange(len(history)), history)[0, 1]
+                len_history = min(len(history), 50)
+                corr = np.corrcoef(np.arange(len(history))[-len_history:], history[-len_history:])[0, 1]
                 # print("Correlation between time and temp history: ", corr)
-    
+                blob.corr = corr
                 # quantify if there exists a sharp decline in the temp history, which indicates a non-residual blob that is occluded by blanket
                 # sharp decline is defined as a drop of more than 5 degrees within 10 frames
                 for i in range(len(history)-20):
@@ -228,8 +227,16 @@ class Tracker:
                         print("Sharp decline detected in temp history, likely occluded human. Blob ID: ", blob.id_fixed)
                         break
                 
-
-                blob.corr = corr
+                # check blob velocity and shape changes
+                velocity = blob.get_velocity()
+                print(f"Blob: {blob.id_fixed}", blob.is_residual, " Velocity: ", velocity, "shape change rate: ", blob.get_bbox_change_velocity())
+                
+                if velocity > 1:# or blob.get_bbox_change_velocity() > 5:  # if the blob is moving fast or changing shape rapidly, it is likely a human even if the temp trend is decreasing
+                    blob.is_residual = False
+                    blob.id = blob.id_fixed  # restore original id if it was marked as residual before
+                    print("Blob is moving fast or changing shape rapidly, likely human. Blob ID: ", blob.id_fixed)
+                    continue
+                    
                 # corr and temp difference between current temp and background temp can jointly determine if the blob is residual
                 # we know that corr threshold should be large if temp diff is large, 
                 # if corr < TEMP_DECREASE_THRESH:
@@ -256,7 +263,7 @@ class Tracker:
                 # data: SMX1, SMX2, YSL1, hall5, 
                 # max ks of human: 0.00213623046875, 0.0038275824652777776, 
                 # max ks of residual: 0.0035424325980392157, 0.005464277194656489
-                # print("corr:", corr)
+                print("k:", k)
                 if corr < TEMP_DECREASE_THRESH and k > 0.0040:
                     print("classified as residual due to decreasing temp trend. Blob ID: ", blob.id_fixed)
                     blob.is_residual = True
@@ -305,12 +312,12 @@ if __name__ == "__main__":
         from heatsource_detection_module.extract import HeatSourceDetector
         from data_visualization_module.plot import DataVisualizer, stitch_images
         datavisualizer = DataVisualizer()
-        dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall1")
+        dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/home31")
         detector = HeatSourceDetector()
         tracker = Tracker()
 
         indices = range(18230, 18265)
-        indices = range(18200, len(dataset), 1) # test on all frames in the dataset
+        indices = range(0, len(dataset), 10) # test on all frames in the dataset
 
         for idx in indices: #18115
             ira_highres = dataset.get_ira_highres(idx)
