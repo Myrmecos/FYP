@@ -100,7 +100,7 @@ class Tracker:
             new_blob = KalmanBlob(mask=mask, masked_temps=masked_temps)
 
             # ======== check if residual is generated =========
-            print("mean temp of new blob: ", new_blob.mean_temp)
+            # print("mean temp of new blob: ", new_blob.mean_temp)
             residual_index = self.residual_detector.get_residual_index(self.blobs, new_blob)
             print("residual index: ", residual_index)
             if residual_index is not None:

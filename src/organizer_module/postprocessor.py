@@ -268,7 +268,7 @@ if __name__ == "__main__":
 
         waittime = 1
         # 3. loop through each fraome
-        for idx in range(0, len(dataset), 1):
+        for idx in range(2000, len(dataset), 1):
             # if idx == 8720:
             #     waittime = 0
             label = dataset.annotations_expanded[idx]
@@ -345,7 +345,86 @@ if __name__ == "__main__":
         #   5.1. visualize the presence detection result for each frame, and compare with the ground truth label
         #   5.2. visualize the blob classification result for each frame, and compare with the ground truth label
 
-    test_postprocessor()
+    import matplotlib.pyplot as plt
+
+    def test_pipeline_gridsearch():
+        # load yaml content from /Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/config/exp_setup.yaml
+        with open('/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/config/exp_setup.yaml', 'r') as f:
+            config = yaml.safe_load(f)
+            train_all = config['train_all'][:3]
+        TEMP_DECREASE_THRESH = [-0.9, -0.92, -0.95]
+        K_THRESH = [0.003, 0.004, 0.005]
+
+        for temp_thresh in TEMP_DECREASE_THRESH:
+            for k_thresh in K_THRESH:
+                pred = []
+                gt = []
+                print(f"Testing with TEMP_DECREASE_THRESH: {temp_thresh}, K_THRESH: {k_thresh}")
+                for folder in train_all:
+                    gt_result_lst, pred_res_lst = _test_pipeline_gridsearch(folder)
+                    pred.extend(pred_res_lst)
+                    gt.extend(gt_result_lst)
+                    print("accuracy: ", sum([1 if p == 1 and g == 1 else 0 for p, g in zip(pred_res_lst, gt_result_lst)]) / len(gt_result_lst))
+                    print("present predicted as absent: ", sum([1 if p == 0 and g == 1 else 0 for p, g in zip(pred_res_lst, gt_result_lst)]) / len(gt_result_lst))
+                    plt.plot(pred_res_lst, alpha = 0.5, label = "pred")
+                    plt.plot(gt_result_lst, alpha = 0.5, label = "GT")
+                    plt.legend()
+                    plt.show()
+                    print("absent predicted as present: ", sum([1 if p == 1 and g == 0 else 0 for p, g in zip(pred_res_lst, gt_result_lst)]) / len(gt_result_lst)) 
+                print("===summary: present predicted as absent: ", sum([1 if p == 0 and g == 1 else 0 for p, g in zip(pred, gt)]) / len(gt))
+                print("===summary: absent predicted as present: ", sum([1 if p == 1 and g == 0 else 0 for p, g in zip(pred, gt)]) / len(gt))
+                print("=== summary: accuracy: ", sum([1 if p == 1 and g == 1 else 0 for p, g in zip(pred, gt)]) / len(gt)) 
+    from tqdm import tqdm
+    def _test_pipeline_gridsearch(dataset_path, HUMAN_ENV_THRESH = 4, TEMP_DECREASE_THRESH = -0.9, K_THRESH = 0.004):
+        """
+        Using grid search to find the best parameters for track_kalman
+        """
+        dataset = ThermalDataset(dataset_path, noCam = True)
+        heat_detector = HeatSourceDetector()
+        thermalinvariantpreprocessor = ThermalInvariantPreprocessor()
+        # # posture_detector_model = SimpleIRA_CNN()
+        # posture_detector_model.load_state_dict(torch.load('/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/weights/all_current_data.pth'))
+        
+        #   2.2. kalman tracker module: load the module
+        tracker = Tracker()
+        #   2.4. postprocessor module: load the module
+        postprocessor = PostProcessor()
+        
+        gt_result_lst = []
+        pred_res_lst = []
+        print("dataset length: ", len(dataset))
+
+        waittime = 1
+        # 3. loop through each fraome
+        for idx in tqdm(range(len(dataset))):
+            # if idx == 8720:
+            #     waittime = 0
+            label = dataset.annotations_expanded[idx]
+            label = 1 if label >= 1 else label
+            # if label == -1:
+            #      continue
+            gt_result_lst.append(label)
+            ira_highres = dataset.get_ira_highres(idx)
+            #   3.1. detect heat source
+            thresh, mask = heat_detector.get_thresh_mask_otsu(ira_highres)
+            # mask_processed = heat_detector.process_frame_mask(ira_highres, min_size=100)
+            mask_individual = heat_detector.process_frame_connected_components(ira_highres, min_size=100)
+            #   3.2. detect presence with kalman tracker
+            tracker.update_blobs(mask_individual, ira_highres, heat_detector.get_unmasked_mean(ira_highres, mask), idx)
+            postprocessor.get_blobs(tracker.blobs, idx)
+            #   3.3. posture detection if kalman shows presence; record it in postprocessor
+            hasHuman = 0
+            for blob in tracker.blobs:
+                if blob.is_residual == False: # if it is classified as human
+                    hasHuman = 1
+            pred_res_lst.append(hasHuman)
+            # visualize the result for this frame
+            # visualize_frame(ira_highres, tracker.blobs, posture_str, idx, waittime)
+        
+        #print("DEBUG: posture records: ", len(postprocessor.posture_records), len(gt_result_lst))
+        return gt_result_lst, pred_res_lst
+
+
     
     def test_results():
         import matplotlib.pyplot as plt
@@ -445,6 +524,8 @@ if __name__ == "__main__":
         # plt.show()
 
 
-    test_results()
+    # test_results()
+    # test_postprocessor()
+    test_pipeline_gridsearch() 
 
 

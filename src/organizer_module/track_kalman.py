@@ -11,14 +11,23 @@ from scipy.optimize import linear_sum_assignment, curve_fit
 
 HUNG_THRESH = 0.2  # minimum score for match acceptance
 SIZE_THRESH = 100  # minimum size of heat source to be considered a blob
-HUMAN_ENV_THRESH = 4
+HUMAN_ENV_THRESH = 4 # temperature differences between human and env
+TEMP_DECREASE_THRESH = -0.9 # temperature decrease correlation threshold
+K_THRESH = 0.004 # THRESHOLD for attenuation coefficient. Exceeding the threshold indicates decreasing trend
+HISTORY_THRESH = 100
 
 class Tracker:
-    def __init__(self):
+    def __init__(self, hung_thresh = HUNG_THRESH, size_thresh = SIZE_THRESH, human_env_thresh = HUMAN_ENV_THRESH, temp_decrease_thresh = TEMP_DECREASE_THRESH, k_thresh = K_THRESH, history_thresh = HISTORY_THRESH):
         self.blobs = []  # list of KalmanBlob objects
         self.residual_detector = ResidualHeatDetector()
         self.relations = dict() # adjacency list to track the relations between blobs
-    
+
+        self.HUNG_THRESH = hung_thresh
+        self.SIZE_THRESH = size_thresh
+        self.HUMAN_ENV_THRESH = human_env_thresh
+        self.TEMP_DECREASE_THRESH = temp_decrease_thresh
+        self.K_THRESH = k_thresh
+        self.HISTORY_THRESHOLD = history_thresh
     # move Hungarian algorithm out to here
     def _associate_blobs(self, detected_heat_sources, frame_shape):
         """
@@ -61,7 +70,7 @@ class Tracker:
         for r, c in zip(row_ind, col_ind):
             iou = score_matrix[r, c]  # note: score, not pure IoU
             # accept if IoU good, or centers close even when IoU collapsed
-            centers_close = score_matrix[r, c] >= HUNG_THRESH  # blended metric threshold
+            centers_close = score_matrix[r, c] >= self.HUNG_THRESH  # blended metric threshold
             if centers_close:
                 matched_pairs.append((r, c))
         return matched_pairs
@@ -101,7 +110,7 @@ class Tracker:
         
         # B1. check for new heat sources that do not match existing blobs
         for source_idx in unmatched_new_heat_sources_indices:
-            print("DEBUG: New heat source detected at index ", idx, " source index: ", source_idx)
+            # print("DEBUG: New heat source detected at index ", idx, " source index: ", source_idx)
             source = detected_heat_sources[source_idx]
             mask = source
             masked_temps = original_ira_img[mask.astype(bool)]
@@ -109,20 +118,19 @@ class Tracker:
             heatsource_size = np.sum(mask.astype(bool))
             # =========== Case 1: Noise or insignificant heat source ===========
             # print("DEBUG:avg temp too low ", avg_temp < background_avg + 3, "; heatsource size too small ", heatsource_size < SIZE_THRESH)
-            if avg_temp < background_avg + HUMAN_ENV_THRESH  or heatsource_size < SIZE_THRESH:  # threshold to filter out noise
+            if avg_temp < background_avg + self.HUMAN_ENV_THRESH  or heatsource_size < self.SIZE_THRESH:  # threshold to filter out noise
                 continue
 
             # ============ Case 2: New blob detected ============
             new_blob = KalmanBlob(mask=mask, masked_temps=masked_temps)
 
             # ======== check if residual is generated =========
-            print("mean temp of new blob: ", new_blob.mean_temp)
+            # print("mean temp of new blob: ", new_blob.mean_temp)
             residual_index, ori_index = self.residual_detector.get_residual_ori_index(self.blobs, new_blob) # residual index and original thermal blob index
             # update the relation if one patch split event is detected
-            print("residual index: ", residual_index, " ori index: ", ori_index)
+            # print("residual index: ", residual_index, " ori index: ", ori_index)
             if residual_index is not None and ori_index is not None:
                 self.update_relations(new_blob, self.blobs[ori_index])
-            print("residual index: ", residual_index)
             if residual_index is not None:
                 print("Human left the bed! Residual heat detected. Frame index: ", idx)
                 return_dict["bed_exit"] = True
@@ -164,7 +172,7 @@ class Tracker:
         Verify the blobs' types (residual/human) based on their temperature history and movement patterns.
         """
         # print("=========================")
-        TEMP_DECREASE_THRESH = -0.8  # threshold for temperature decrease trend
+        # threshold for temperature decrease trend
 
 
         # ============================ MAIN LOGIC for determining if a blob is residual ============================
@@ -178,63 +186,31 @@ class Tracker:
             # model the temperature decreasing trend with a more robust method, considering the environmental temperature
             # temperature attenuation function: T(t) = T_env + (T_initial - T_env) * exp(-k*t), where k is the attenuation coefficient
             # we can estimate k from the temp history and determine if the blob is residual based on whether the estimated k is above a certain threshold
-            if len(blob.temp_history) >= 5:
-                sibling_ids = self.relations.get(blob.id_fixed, set())
-                current_temp_history_len = len(blob.temp_history)
-                max_temp_history_len = len(blob.temp_history)
-                min_blob = blob
-                max_blob = blob
-                for sibling_id in sibling_ids:
-                    sibling = self.find_sibling(sibling_id)
-                    if sibling is None:
-                        continue
-                    # if min_temp_history_len > len(sibling.temp_history):
-                    #     min_temp_history_len = len(sibling.temp_history)
-                    #     min_blob = sibling
-                    if max_temp_history_len < len(sibling.temp_history):
-                        max_temp_history_len = len(sibling.temp_history)
-                        max_blob = sibling
-
-                # appending the temp history of the sibling to the current blob
-                # to obtain a more complete temp history for robust estimation of temp trend
-                start = max(0, max_temp_history_len - current_temp_history_len - 10)  # get the last 20 frames of temp history for fitting
-                end = max_temp_history_len - current_temp_history_len
-                seg1 = max_blob.temp_history[start:end]
-                seg2 = blob.temp_history[:]
+            if len(blob.temp_history) >= self.HISTORY_THRESHOLD//2: # 3 seconds
                 # print("seg1: ", seg1, " seg2: ", seg2)
-                history = seg1
-                history.extend(seg2)
-                history = history[-40:]  # only keep the last 40 frames of history to capture the recent trend, which is more relevant for determining if it's residual
+                history = blob.temp_history
+                history = history[-self.HISTORY_THRESHOLD:]  # only keep the last HISTORY_THRESHOLD frames of history to capture the recent trend, which is more relevant for determining if it's residual
                 # otherwise we risk classifying residual as a human (longer history, more coverage, k is not captured correctly)
-
-
-
-                print("Blob ID: ", blob.id_fixed, " temp: ", blob.temp_history[-1])
-                # use the history to directly compute the correlation between time and temperature, if the correlation is strongly negative, it indicates a decreasing trend
-                # we want to detect the case where temperature is steadily and gradually decreasing, indicating heat residual
-                # but we don't want to classify a blob with a sharp decline as residual, because it could be human being occluded by blanket
-                if len(history) <= 30:
-                    continue
-                len_history = min(len(history), 50)
-                corr = np.corrcoef(np.arange(len(history))[-len_history:], history[-len_history:])[0, 1]
-                # print("Correlation between time and temp history: ", corr)
+                
+                # calculate correlation between time and temperature history
+                len_history = min(self.HISTORY_THRESHOLD, len(history))  
+                corr = np.corrcoef(range(len_history), history[-len_history:])[0, 1]
                 blob.corr = corr
+
                 # quantify if there exists a sharp decline in the temp history, which indicates a non-residual blob that is occluded by blanket
                 # sharp decline is defined as a drop of more than 5 degrees within 10 frames
                 for i in range(len(history)-20):
                     if history[i] - history[i+20] > 3:
                         corr = 0  # if there exists a sharp decline, we set k to 0 to avoid misclassifying occluded human as residual
-                        print("Sharp decline detected in temp history, likely occluded human. Blob ID: ", blob.id_fixed)
+                        # print("Sharp decline detected in temp history, likely occluded human. Blob ID: ", blob.id_fixed)
                         break
                 
                 # check blob velocity and shape changes
                 velocity = blob.get_velocity()
-                print(f"Blob: {blob.id_fixed}", blob.is_residual, " Velocity: ", velocity, "shape change rate: ", blob.get_bbox_change_velocity())
-                
                 if velocity > 1:# or blob.get_bbox_change_velocity() > 5:  # if the blob is moving fast or changing shape rapidly, it is likely a human even if the temp trend is decreasing
                     blob.is_residual = False
                     blob.id = blob.id_fixed  # restore original id if it was marked as residual before
-                    print("Blob is moving fast or changing shape rapidly, likely human. Blob ID: ", blob.id_fixed)
+                    # print("Blob is moving fast or changing shape rapidly, likely human. Blob ID: ", blob.id_fixed)
                     continue
                     
                 # corr and temp difference between current temp and background temp can jointly determine if the blob is residual
@@ -244,42 +220,17 @@ class Tracker:
                 t_initial = history[0]
                 t_final = history[-1]
                 t_len = len(history)
-
-                # # t_initial should be largest val in the history, t_final should be the last value
-                # t_initial = max(history[:-min(30, len(history))])
-                # t_final = history[-1]
-                # # the spacing between t_initial and t_final
-                # t_initial_index = history.index(t_initial)
-                # t_final_index = len(history) - 1
-                # t_len = t_final_index - t_initial_index
-                # env temp
                 t_env = background_temp
                 k = -np.log((t_final - t_env) / (t_initial - t_env)) / t_len
-                # print("Estimated k: ", k)
-                if k > blob.max_k:
-                    blob.max_k = k
-                    # print("initial index: ", t_initial_index, " final index: ", t_final_index, " t_len: ", t_len, " t_initial: ", t_initial, " t_final: ", t_final, " env temp: ", t_env)
-                # print("blob max k: ", blob.max_k)
-                # data: SMX1, SMX2, YSL1, hall5, 
-                # max ks of human: 0.00213623046875, 0.0038275824652777776, 
-                # max ks of residual: 0.0035424325980392157, 0.005464277194656489
-                print("k:", k)
-                if corr < TEMP_DECREASE_THRESH and k > 0.0040:
-                    print("classified as residual due to decreasing temp trend. Blob ID: ", blob.id_fixed)
+                    
+                if corr < self.TEMP_DECREASE_THRESH and k > self.K_THRESH:
+                    # print("classified as residual due to decreasing temp trend. Blob ID: ", blob.id_fixed)
                     blob.is_residual = True
                     blob.id = -1  # mark as residual blob
 
                 
                 velocity = blob.get_velocity()
-                # print("Blob ID: ", blob.id_fixed, " Temp history len: ", len(blob.temp_history), " Min temp history len: ", min_temp_history_len, " Sibling IDs: ", sibling_ids)
-                # print("k value:", k, "k > 0.1:", k>0.1)
-                # print("Velocity: ", velocity)
-                # print("is residual: ", blob.is_residual)
-                
 
-                # if k > 0.1:
-                #     blob.is_residual = True
-                #     blob.id = -1  # mark as residual blob
         
         
                     
@@ -300,8 +251,8 @@ class Tracker:
         
     def update(self, ira, detector):
         thresh, mask = detector.get_thresh_mask_otsu(ira)
-        mask_processed = detector.process_frame_mask(ira, min_size=SIZE_THRESH)
-        mask_individual = detector.process_frame_connected_components(ira, min_size=SIZE_THRESH)
+        mask_processed = detector.process_frame_mask(ira, min_size=self.SIZE_THRESH)
+        mask_individual = detector.process_frame_connected_components(ira, min_size=self.SIZE_THRESH)
         self.update_blobs(mask_individual, ira, detector.get_unmasked_mean(ira, mask))
         self.track_blob_relations()
 
@@ -322,7 +273,7 @@ if __name__ == "__main__":
         for idx in indices: #18115
             ira_highres = dataset.get_ira_highres(idx)
             thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
-            mask_processed = detector.process_frame_mask(ira_highres, min_size=SIZE_THRESH)
+            mask_processed = detector.process_frame_mask(ira_highres, min_size=tracker.SIZE_THRESH)
             mask_individual = detector.process_frame_connected_components(ira_highres, min_size=SIZE_THRESH)
             # cleaned_mask = detector.get_connected_components(mask, min_size=SIZE_THRESH)
             print(len(mask_individual), "heat sources detected in frame", idx)
@@ -369,7 +320,7 @@ if __name__ == "__main__":
         for idx in rng: #18115
             ira_highres = dataset.get_ira_highres(idx)
             thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
-            cleaned_mask = detector.get_connected_components(mask, min_size=SIZE_THRESH)
+            cleaned_mask = detector.get_connected_components(mask, min_size=self.SIZE_THRESH)
             tracker.update_blobs(cleaned_mask, ira_highres, detector.get_unmasked_mean(ira_highres, mask))
         
         # plot the blobs' centroids movements

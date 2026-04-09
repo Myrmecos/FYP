@@ -114,7 +114,7 @@ class Tracker:
             new_blob = KalmanBlob(mask=mask, masked_temps=masked_temps)
 
             # ======== check if residual is generated =========
-            print("mean temp of new blob: ", new_blob.mean_temp)
+            # print("mean temp of new blob: ", new_blob.mean_temp)
             residual_index, ori_index = self.residual_detector.get_residual_ori_index(self.blobs, new_blob) # residual index and original thermal blob index
             # update the relation if one patch split event is detected
             print("residual index: ", residual_index, " ori index: ", ori_index)
@@ -233,10 +233,10 @@ class Tracker:
 
                 
                 velocity = blob.get_velocity()
-                print("Blob ID: ", blob.id_fixed, " Temp history len: ", len(blob.temp_history), " Min temp history len: ", min_temp_history_len, " Sibling IDs: ", sibling_ids)
+                # print("Blob ID: ", blob.id_fixed, " Temp history len: ", len(blob.temp_history), " Min temp history len: ", min_temp_history_len, " Sibling IDs: ", sibling_ids)
                 # print("k value:", k, "k > 0.1:", k>0.1)
-                print("Velocity: ", velocity)
-                print("is residual: ", blob.is_residual)
+                # print("Velocity: ", velocity)
+                # print("is residual: ", blob.is_residual)
                 
 
                 # if k > 0.1:
