@@ -90,6 +90,7 @@ class ThermalDataset(dataset.Dataset):
         self.tof_dir = os.path.join(dataset_base_dir, "ToF")
         self.annotation_path = os.path.join(dataset_base_dir, "annotation.yaml")
         self.noCam = noCam
+        self.exit_frame_indices = [] #
 
         if not noCam:
             self.img_files = sorted([f for f in os.listdir(self.camera_dir) if f.endswith('.png') or f.endswith('.jpg')])
@@ -98,6 +99,7 @@ class ThermalDataset(dataset.Dataset):
         self.tof_files = sorted([f for f in os.listdir(self.tof_dir) if f.endswith('.pkl')])
         self.annotations_expanded = [-1 for _ in range(self.__len__())]  # type: List[int]
         self.process_annotations()
+        
     
     def __getitem__(self, index):
         if not self.noCam:
@@ -163,6 +165,10 @@ class ThermalDataset(dataset.Dataset):
             for entry in self.annotations["lying_with_cover"]:
                 for i in range(entry[0], entry[1]+1):
                     self.annotations_expanded[i] = 6
+            # if annotations_expanded has 'exit' field:
+            if "exit" in self.annotations:
+                for entry in self.annotations["exit"]:
+                    self.exit_frame_indices.append(entry)
         except:
             print("problems with annotation format. Please check the annotation.yaml file. All frames will be labeled as -1 (unknown).")
             # print error mesasge
