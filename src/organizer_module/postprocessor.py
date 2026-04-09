@@ -105,7 +105,7 @@ if __name__ == "__main__":
             if blob.mean_temp is None or blob.centroid is None:
                 continue
             color = (0, 255, 0) if blob.is_residual == False else (0, 255, 255)
-            cv2.circle(ira_color, (int(blob.centroid[0]), int(blob.centroid[1])), 10, color, 2)
+            # cv2.circle(ira_color, (int(blob.centroid[1]), int(blob.centroid[0])), 10, color, 2)
             # draw bbox
             x_min, y_min, x_max, y_max = blob.get_state()
             x_min = int(x_min * scale_factor)
@@ -114,7 +114,7 @@ if __name__ == "__main__":
             y_max = int(y_max * scale_factor)
             cv2.rectangle(ira_color, (x_min, y_min), (x_max, y_max), color, 2)
 
-        cv2.putText(ira_color, f'Posture: {posture_label}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        cv2.putText(ira_color, f'Frame: {index}| Posture: {posture_label}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         cv2.imshow('ira', ira_color)
         key = cv2.waitKey(1)
         if key == ord('q'):
@@ -125,7 +125,8 @@ if __name__ == "__main__":
     def test_postprocessor():
         # use a data entry as test: /Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall5
         # 1. load the dataset
-        dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office1_0")
+        # dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office1_0")
+        dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_2")
         # 2. initialize our system's components ==================================
         #   2.1. heatsource detection module: load the module
         heat_detector = HeatSourceDetector()
@@ -142,7 +143,7 @@ if __name__ == "__main__":
 
 
         # 3. loop through each fraome
-        for idx in range(0, len(dataset)):
+        for idx in range(4000, len(dataset)):
             label = dataset.annotations_expanded[idx]
             ira_highres = dataset.get_ira_highres(idx)
             #   3.1. detect heat source

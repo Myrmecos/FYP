@@ -236,10 +236,28 @@ class Tracker:
                 # the relations between temp and environmental temp is: T(t) = T_env + (T_initial - T_env) * exp(-k*t)
                 t_initial = history[0]
                 t_final = history[-1]
+                t_len = len(history)
+
+                # # t_initial should be largest val in the history, t_final should be the last value
+                # t_initial = max(history[:-min(30, len(history))])
+                # t_final = history[-1]
+                # # the spacing between t_initial and t_final
+                # t_initial_index = history.index(t_initial)
+                # t_final_index = len(history) - 1
+                # t_len = t_final_index - t_initial_index
+                # env temp
                 t_env = background_temp
-                k = -np.log((t_final - t_env) / (t_initial - t_env)) / len(history)
+                k = -np.log((t_final - t_env) / (t_initial - t_env)) / t_len
                 print("Estimated k: ", k)
-                if corr < TEMP_DECREASE_THRESH and k > 0.003:
+                if k > blob.max_k:
+                    blob.max_k = k
+                    # print("initial index: ", t_initial_index, " final index: ", t_final_index, " t_len: ", t_len, " t_initial: ", t_initial, " t_final: ", t_final, " env temp: ", t_env)
+                print("blob max k: ", blob.max_k)
+                # data: SMX1, SMX2, YSL1, hall5, 
+                # max ks of human: 0.00213623046875, 0.0038275824652777776, 
+                # max ks of residual: 0.0035424325980392157, 0.005464277194656489
+                print("corr:", corr)
+                if corr < TEMP_DECREASE_THRESH and k > 0.0040:
                     print("classified as residual due to decreasing temp trend. Blob ID: ", blob.id_fixed)
                     blob.is_residual = True
                     blob.id = -1  # mark as residual blob
@@ -275,8 +293,8 @@ class Tracker:
         
     def update(self, ira, detector):
         thresh, mask = detector.get_thresh_mask_otsu(ira)
-        mask_processed = detector.process_frame_mask(ira, min_size=200)
-        mask_individual = detector.process_frame_connected_components(ira, min_size=200)
+        mask_processed = detector.process_frame_mask(ira, min_size=SIZE_THRESH)
+        mask_individual = detector.process_frame_connected_components(ira, min_size=SIZE_THRESH)
         self.update_blobs(mask_individual, ira, detector.get_unmasked_mean(ira, mask))
         self.track_blob_relations()
 
@@ -297,9 +315,9 @@ if __name__ == "__main__":
         for idx in indices: #18115
             ira_highres = dataset.get_ira_highres(idx)
             thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
-            mask_processed = detector.process_frame_mask(ira_highres, min_size=200)
-            mask_individual = detector.process_frame_connected_components(ira_highres, min_size=200)
-            # cleaned_mask = detector.get_connected_components(mask, min_size=200)
+            mask_processed = detector.process_frame_mask(ira_highres, min_size=SIZE_THRESH)
+            mask_individual = detector.process_frame_connected_components(ira_highres, min_size=SIZE_THRESH)
+            # cleaned_mask = detector.get_connected_components(mask, min_size=SIZE_THRESH)
             print(len(mask_individual), "heat sources detected in frame", idx)
             tracker.update_blobs(mask_individual, ira_highres, detector.get_unmasked_mean(ira_highres, mask))
 
@@ -344,7 +362,7 @@ if __name__ == "__main__":
         for idx in rng: #18115
             ira_highres = dataset.get_ira_highres(idx)
             thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
-            cleaned_mask = detector.get_connected_components(mask, min_size=200)
+            cleaned_mask = detector.get_connected_components(mask, min_size=SIZE_THRESH)
             tracker.update_blobs(cleaned_mask, ira_highres, detector.get_unmasked_mean(ira_highres, mask))
         
         # plot the blobs' centroids movements

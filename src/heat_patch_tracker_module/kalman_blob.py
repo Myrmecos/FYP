@@ -53,6 +53,7 @@ class KalmanBlob(object):
     This class represents the internal state of individual tracked objects observed as blobs.
     '''
     def __init__(self, id=None, mask=None, masked_temps=None, mean_temp=None, centroid=None):
+        self.max_k = 0 #DEBUG
         self.id = KalmanBlob.id  # unique identifier for the blob
         self.id_fixed = KalmanBlob.id  # fixed id for the blob, will not change even if marked as residual
         KalmanBlob.id += 1
@@ -194,8 +195,8 @@ class KalmanBlob(object):
         if self.masked_temps.size == 0:
             return -1
         # take the 25 to 75 percentile mean to reduce the influence of noise and outliers
-        lower_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 25)
-        upper_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 75)
+        lower_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 1)
+        upper_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 99)
         self.max_temp = np.max(self.masked_temps[(self.masked_temps > lower_percentile) & (self.masked_temps < upper_percentile)])
         # self.max_temp = 30
         return self.max_temp
