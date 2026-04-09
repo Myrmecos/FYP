@@ -77,6 +77,7 @@ class PostProcessor:
             json.dump(out, f, indent=4)
             
 
+
 if __name__ == "__main__":
     import sys
     from pathlib import Path
@@ -122,11 +123,13 @@ if __name__ == "__main__":
             sys.exit(0)
         # cv2.destroyAllWindows()
 
+    data_name = "office1_0"
+
     def test_postprocessor():
         # use a data entry as test: /Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall5
         # 1. load the dataset
         # dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office1_0")
-        dataset = ThermalDataset("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_2")
+        dataset = ThermalDataset(f"/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/{data_name}")
         # 2. initialize our system's components ==================================
         #   2.1. heatsource detection module: load the module
         heat_detector = HeatSourceDetector()
@@ -140,11 +143,13 @@ if __name__ == "__main__":
         #   2.4. postprocessor module: load the module
         postprocessor = PostProcessor()
         
+        gt_result_lst = []
 
 
         # 3. loop through each fraome
-        for idx in range(4000, len(dataset)):
+        for idx in range(0, len(dataset)):
             label = dataset.annotations_expanded[idx]
+            gt_result_lst.append(label)
             ira_highres = dataset.get_ira_highres(idx)
             #   3.1. detect heat source
             thresh, mask = heat_detector.get_thresh_mask_otsu(ira_highres)
@@ -163,9 +168,9 @@ if __name__ == "__main__":
                 ira_highres = thermalinvariantpreprocessor(ira_highres)
                 posture = posture_detector_model(torch.tensor(ira_highres, dtype=torch.float32).unsqueeze(0)) # add batch and channel dimension
                 posture_label = torch.argmax(posture, dim=1).item()
-                print("DEBUG: posture label: ", posture_label)
+                # print("DEBUG: posture label: ", posture_label)
                 posture_label = inverse_remap_labels_simple(posture_label)  # remap the posture label
-                print("DEBUG: inverse remap posture label: ", posture_label)
+                # print("DEBUG: inverse remap posture label: ", posture_label)
                 postprocessor.get_posture(posture_label, idx)  # inverse remap the posture label
                 posture_str = label_to_text_simple(posture_label)
             else:
@@ -176,15 +181,88 @@ if __name__ == "__main__":
             # visualize the result for this frame
             visualize_frame(ira_highres, tracker.blobs, posture_str, idx)
         
-        print(postprocessor.posture_records)
+        print("DEBUG: posture records: ", len(postprocessor.posture_records), len(gt_result_lst))
+
+        # draw the confusion matrix for posture classificatino result
+
+
+        def confusion_matrix_draw(results, gt_result_lst):
+            from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
+            y_true = gt_result_lst
+            y_pred = [1 if r[1] == 'HUMAN' else 0 for r in results]
+
+            cm = confusion_matrix(y_true, y_pred)
+            disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['No Human', 'Human'])
+            disp.plot(cmap=plt.cm.Blues)
+            plt.title("Confusion Matrix for Posture Classification")
+            plt.show()
+
+        results = postprocessor.posture_records
+        # write results and gt_result_lst to a json file for later analysis
+        with open(f'/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/output/{data_name}.json', 'w') as f:
+            json.dump({'results': results, 'gt_result_lst': gt_result_lst}, f, indent=4)
+
+
+
+
+
+
         # 4. postprocess
         #   4.1. postprocess presence, make a list of presence data
-        postprocessor.postprocess_presence()
+        # postprocessor.postprocess_presence()
+
         #   4.2. postprocess postures, make a list of posture data.
-        postprocessor.postprocess_posture()
+        # postprocessor.postprocess_posture()
 
         # 5. compare the smoothed posture classification result with the ground truth label, and visualize the comparison
         # 5. visualize: plot the posture classification result for each frame, and compare with the ground truth label
         #   5.1. visualize the presence detection result for each frame, and compare with the ground truth label
         #   5.2. visualize the blob classification result for each frame, and compare with the ground truth label
+
     test_postprocessor()
+    
+    def test_results():
+        import matplotlib.pyplot as plt
+        # load from json
+        with open(f'/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/output/{data_name}.json', 'r') as f:
+            data = json.load(f)
+            results = data['results']
+            gt_result_lst = data['gt_result_lst']
+
+        print("DEBUG: results: ", len(results))
+        print("DEBUG: gt_result_lst: ", len(gt_result_lst))
+
+        plt.plot(results, label='Predicted Posture')
+        plt.plot(gt_result_lst, label='Ground Truth Posture')
+        plt.legend()
+        plt.show()
+
+        # when gt_results_lst is -1, we regard it as 0
+        # when gt_results_lst is 1, it can match all the presence labels (2, 3, 4, 5, 6)
+        # compute the accuracy
+        correct = 0
+        total = 0
+        for i in range(len(gt_result_lst)):
+            gt = gt_result_lst[i]
+            pred = results[i]
+            if gt == -1:
+                gt = 0
+            if gt == 1:
+                if pred in [2, 3, 4, 5, 6]:
+                    correct += 1
+            else:
+                if pred == gt:
+                    correct += 1
+            total += 1
+        accuracy = correct / total
+        print(f"Accuracy: {accuracy:.4f}")
+        #print acc and recall and F1 score for pose classification
+        from sklearn.metrics import classification_report
+        # resutls and gt_rersult_lst are both a list of pose labels
+        # target_names=['Absence', 'Presence', 'Standing', 'Sitting by Bed', 'Sitting on Bed', 'Lying w/o Cover', 'Lying with Cover']
+        print(classification_report(gt_result_lst, results))
+
+    test_results()
+
+

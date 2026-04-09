@@ -167,7 +167,7 @@ class Tracker:
         for id, blob in enumerate(self.blobs):
             # print("+++++++++++++++++++Blob ID: ", blob.id_fixed)
             blob.update_temp_trend() #update blob.temp_trend variable
-            print("Blob ID: ", blob.id_fixed, " Temp: ", blob.temp_history, " Is residual: ", blob.is_residual)
+            # print("Blob ID: ", blob.id_fixed, " Temp: ", blob.temp_history, " Is residual: ", blob.is_residual)
             # if blob.temp_trend < TEMP_DECREASE_THRESH:
             #     blob.is_residual = True
             #     blob.id = -1  # mark as residual blob
@@ -248,15 +248,15 @@ class Tracker:
                 # env temp
                 t_env = background_temp
                 k = -np.log((t_final - t_env) / (t_initial - t_env)) / t_len
-                print("Estimated k: ", k)
+                # print("Estimated k: ", k)
                 if k > blob.max_k:
                     blob.max_k = k
                     # print("initial index: ", t_initial_index, " final index: ", t_final_index, " t_len: ", t_len, " t_initial: ", t_initial, " t_final: ", t_final, " env temp: ", t_env)
-                print("blob max k: ", blob.max_k)
+                # print("blob max k: ", blob.max_k)
                 # data: SMX1, SMX2, YSL1, hall5, 
                 # max ks of human: 0.00213623046875, 0.0038275824652777776, 
                 # max ks of residual: 0.0035424325980392157, 0.005464277194656489
-                print("corr:", corr)
+                # print("corr:", corr)
                 if corr < TEMP_DECREASE_THRESH and k > 0.0040:
                     print("classified as residual due to decreasing temp trend. Blob ID: ", blob.id_fixed)
                     blob.is_residual = True

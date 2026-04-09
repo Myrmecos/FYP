@@ -12,6 +12,8 @@ from organizer_module.track_kalman import Tracker
 from dataset import ThermalDataset
 from heatsource_detection_module.extract import HeatSourceDetector
 from postprocessor import PostProcessor
+
+
 if __name__ == "__main__":
     def plot_trajectory_on_img():
         from dataset import ThermalDataset
@@ -133,3 +135,4 @@ if __name__ == "__main__":
         postprocessor.output_results(f"{data_path}/blob_records.json")
 
     plot_trajectory_on_img()
+
