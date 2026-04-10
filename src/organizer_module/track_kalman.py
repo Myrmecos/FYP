@@ -10,7 +10,7 @@ from residual_heat_detection_module.residual_detect import ResidualHeatDetector
 from scipy.optimize import linear_sum_assignment, curve_fit
 
 HUNG_THRESH = 0.2  # minimum score for match acceptance
-SIZE_THRESH = 100  # minimum size of heat source to be considered a blob
+SIZE_THRESH = 80  # minimum size of heat source to be considered a blob
 HUMAN_ENV_THRESH = 4 # temperature differences between human and env
 TEMP_DECREASE_THRESH = -0.9 # temperature decrease correlation threshold
 K_THRESH = 0.004 # THRESHOLD for attenuation coefficient. Exceeding the threshold indicates decreasing trend
@@ -207,6 +207,7 @@ class Tracker:
                 for i in range(len(history)-20):
                     if history[i] - history[i+20] > 3:
                         corr = 0  # if there exists a sharp decline, we set k to 0 to avoid misclassifying occluded human as residual
+                        blob.k = 0  # if there exists a sharp decline, we set k to 0 to avoid misclassifying occluded human as residual
                         # print("Sharp decline detected in temp history, likely occluded human. Blob ID: ", blob.id_fixed)
                         break
                 
@@ -227,6 +228,7 @@ class Tracker:
                 t_len = len(history)
                 t_env = background_temp
                 k = -np.log((t_final - t_env) / (t_initial - t_env)) / t_len
+                blob.k = k
                 
                 if corr < self.TEMP_DECREASE_THRESH and k > self.K_THRESH:
                     # print("classified as residual due to decreasing temp trend. Blob ID: ", blob.id_fixed)

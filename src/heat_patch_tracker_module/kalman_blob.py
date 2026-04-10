@@ -68,6 +68,7 @@ class KalmanBlob(object):
         self.temp_history = [] # if temp is decreasing, is heat residual, not human
         self.temp_trend = 0
         self.corr = 0 # temperature attenuation coefficient estimated
+        self.k = 0
         self.centroid_history = [] # if move is directional (in some segments), likely human
         self.kalman_centroid_history = []  # history of centroids from Kalman filter
         self.queue_len = 400 # length of history to keep, longer history for better analysis
