@@ -204,9 +204,11 @@ def run_cross_env(train_envs, test_envs):
 
         print(f"\n  Test on {env_key}:")
         model = SimpleIRA_CNN(num_classes=len(label_to_index))
-        train_model(model, train_loader, val_loader, label_to_index, num_epochs=15, learning_rate=1e-3)
-        torch.save(model.state_dict(), f'/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/weights/posture_cnn_cross_env_{env_key}.pth')
+        # train_model(model, train_loader, val_loader, label_to_index, num_epochs=15, learning_rate=1e-3)
         results = test_model(model, test_loader, label_to_index)
+        # show accuracy
+        
+        # torch.save(model.state_dict(), f'/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/weights/posture_cnn_cross_env_{env_key}.pth')
 
 
 def run_cross_user(train_users, test_users):
@@ -237,9 +239,10 @@ def run_cross_user(train_users, test_users):
 
         print(f"\n  Test on {user_key}:")
         model = SimpleIRA_CNN(num_classes=len(label_to_index))
-        torch.save(model.state_dict(),
-            f'/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/weights/posture_cnn_cross_user_{user_key}.pth')
-        train_model(model, train_loader, val_loader, label_to_index, num_epochs=2, learning_rate=1e-3)
+        #train_model(model, train_loader, val_loader, label_to_index, num_epochs=10, learning_rate=1e-3)
+        #torch.save(model.state_dict(), f'/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/weights/posture_cnn_cross_user_{user_key}.pth')
+        # load model
+        model.load_state_dict(torch.load(f'/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/weights/posture_cnn_cross_user_{user_key}.pth'))
         results = test_model(model, test_loader, label_to_index)
 
 def simple_train(train_envs, train_users, test_envs, test_users):
@@ -314,15 +317,12 @@ def run_cross_user_and_env(train_envs, test_envs, train_users, test_users):
 # 4. Run experiments
 # ==============================================================================
 if __name__ == '__main__':
-    print("\n" + "="*60)
-    print("Running cross-validation experiments")
-    print("="*60)
 
-    simple_train(train_envs, train_users, test_envs, test_users)
+    # simple_train(train_envs, train_users, test_envs, test_users)
     # data = ThermalDataset('/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall_lsb_1')
 
     # Run cross-environment experiment
-    # run_cross_env(train_envs, test_envs)
+    run_cross_env(train_envs, test_envs)
 
     # Run cross-user experiment
     # run_cross_user(train_users, test_users)

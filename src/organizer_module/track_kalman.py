@@ -126,20 +126,25 @@ class Tracker:
 
             # ======== check if residual is generated =========
             # print("mean temp of new blob: ", new_blob.mean_temp)
-            residual_index, ori_index = self.residual_detector.get_residual_ori_index(self.blobs, new_blob) # residual index and original thermal blob index
+            residual_index, ori_index, residual_blob, human_blob = self.residual_detector.get_residual_ori_index(self.blobs, new_blob) # residual index and original thermal blob index
+            
+            
             # update the relation if one patch split event is detected
             # print("residual index: ", residual_index, " ori index: ", ori_index)
             if residual_index is not None and ori_index is not None:
                 self.update_relations(new_blob, self.blobs[ori_index])
+
             if residual_index is not None:
                 print("Human left the bed! Residual heat detected. Frame index: ", idx)
                 return_dict["bed_exit"] = True
                 if residual_index == -1:
                     new_blob.is_residual = True
+                    new_blob.temp_history.extend(residual_blob.temp_history[-5:]) # inherit the temp history from the original blob
                     new_blob.id = -1  # mark as residual blob
                 else:
                     self.blobs[residual_index].is_residual = True
                     new_blob.id = self.blobs[residual_index].id
+                    new_blob.temp_history.extend(human_blob.temp_history[:]) # inherit the temp history from the original blob
                     self.blobs[residual_index].id = -1  # mark as residual blob
 
             self.blobs.append(new_blob)
@@ -222,11 +227,13 @@ class Tracker:
                 t_len = len(history)
                 t_env = background_temp
                 k = -np.log((t_final - t_env) / (t_initial - t_env)) / t_len
-                    
+                
                 if corr < self.TEMP_DECREASE_THRESH and k > self.K_THRESH:
                     # print("classified as residual due to decreasing temp trend. Blob ID: ", blob.id_fixed)
                     blob.is_residual = True
                     blob.id = -1  # mark as residual blob
+                # else:
+                #     print("Blob ID: ", blob.id_fixed, " Temp trend corr: ", corr, " Attenuation coeff k: ", k, " Not classified as residual.")
 
                 
                 velocity = blob.get_velocity()

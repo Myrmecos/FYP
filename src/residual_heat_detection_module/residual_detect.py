@@ -48,10 +48,10 @@ class ResidualHeatDetector:
                 # check temperature difference
                 temp_diff = blob.mean_temp - new_blob.mean_temp
                 if temp_diff <= 0: # blob is colder than new blob, indicating it is residual
-                    return idx, -1 # idx is residual; new_blob is human
+                    return idx, -1, blob, new_blob # idx is residual; new_blob is human
                 else:
-                    return -1, idx # new_blob is residual; idx is human
-        return None, None
+                    return -1, idx, new_blob, blob # new_blob is residual; idx is human
+        return None, None, None, None
                 
 if __name__ == "__main__":
     from dataset import ThermalDataset

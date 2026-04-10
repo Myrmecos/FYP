@@ -2,11 +2,11 @@ env0: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_w
 env1: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/home01']
 env2: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/home2']
 env3: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/home31']
-env4: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_3', '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_2', '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_0']
+env4: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_4', '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_3', '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_2', '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_0']
 env5: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office1_0']
 env6: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office2_0']
-train_envs: ['env0', 'env1', 'env3', 'env4']
-test_envs: ['env2', 'env5', 'env6']
+train_envs: ['env2', 'env1', 'env3', 'env4']
+test_envs: ['env0', 'env5', 'env6']
 user0: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall5', '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_2', '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office1_0']
 user1: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall_lsb_0', '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall_lsb_1']
 user2: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall_SMX1', '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall_SMX2']
@@ -14,8 +14,8 @@ user3: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_
 user4: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_lcx_1']
 user5: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_sf_0']
 user6: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_wjs_0']
-train_users: ['user0', 'user1', 'user2', 'user5']
-test_users: ['user3', 'user4', 'user6']
+train_users: ['user0', 'user1', 'user2', 'user6']
+test_users: ['user3', 'user4', 'user5']
 
 
 train_all: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_3',

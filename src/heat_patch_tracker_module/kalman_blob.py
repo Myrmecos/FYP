@@ -188,22 +188,30 @@ class KalmanBlob(object):
     
     def _compute_median_temp(self):
         """Compute current frames' median temerature of the blob, excluding zero values which are outside mask"""
-        if self.masked_temps.size == 0:
-            return -1
         # take the 25 to 75 percentile mean to reduce the influence of noise and outliers
-        lower_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 25)
-        upper_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 75)
-        self.median_temp = np.median(self.masked_temps[(self.masked_temps > lower_percentile) & (self.masked_temps < upper_percentile)])
+        valid_temps = self.masked_temps[self.masked_temps > 0]
+        lower_percentile = np.percentile(valid_temps, 25)
+        upper_percentile = np.percentile(valid_temps, 75)
+        filtered_temps = valid_temps[(valid_temps > lower_percentile) & (valid_temps < upper_percentile)]
+        if filtered_temps.size == 0:
+            self.median_temp = np.median(valid_temps)
+        else:
+            self.median_temp = np.median(filtered_temps)
         return self.median_temp
 
     def _compute_max_temp(self):
         """Compute current frames' maximum temerature of the blob, excluding zero values which are outside mask"""
-        if self.masked_temps.size == 0:
-            return -1
-        # take the 25 to 75 percentile mean to reduce the influence of noise and outliers
-        lower_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 1)
-        upper_percentile = np.percentile(self.masked_temps[self.masked_temps > 0], 99)
-        self.max_temp = np.max(self.masked_temps[(self.masked_temps > lower_percentile) & (self.masked_temps < upper_percentile)])
+
+        # take the 1 to 99 percentile mean to reduce the influence of noise and outliers
+        valid_temps = self.masked_temps[self.masked_temps > 0]
+        lower_percentile = np.percentile(valid_temps, 1)
+        upper_percentile = np.percentile(valid_temps, 99)
+
+        filtered_temps = valid_temps[(valid_temps > lower_percentile) & (valid_temps < upper_percentile)]
+        if filtered_temps.size == 0:
+            self.max_temp = np.max(valid_temps)
+        else:
+            self.max_temp = np.max(filtered_temps)
         # self.max_temp = 30
         return self.max_temp
 

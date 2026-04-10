@@ -186,7 +186,7 @@ class HeatSourceDetector:
     # given an ira image, return a binary mask of the heat source
     # utilize all methods in this class to find the best mask
     def process_frame_mask(self, ira_img, min_size=100):
-        thresh, mask = self.get_thresh_mask_otsu_gaussian(ira_img)
+        thresh, mask = self.get_thresh_mask_otsu(ira_img)
         eroded_mask = self.erode_mask(mask)
         cleaned_mask = self.remove_small_regions(eroded_mask, min_size)
         return cleaned_mask
@@ -203,6 +203,17 @@ class HeatSourceDetector:
         # dynamic threshold obtained via Gaussian
         ira_uint8 = ira_img.astype('uint8')
         thresh, mask = cv2.threshold(ira_uint8,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        # get all pixel values in ira_img that are above the threshold
+        pixels_above_thresh = ira_img[ira_img >= thresh]
+        if len(pixels_above_thresh) == 0:
+            return thresh, mask
+        # remove lower 25 percentile of the pixels above the threshold to reduce noise
+        lower_percentile = np.percentile(pixels_above_thresh, 10)
+        mask[ira_img < lower_percentile] = 0
+        # erode mask
+        mask = self.erode_mask(mask)
+        thresh = lower_percentile
+
         return thresh, mask
     
     def get_thresh_mask_otsu_gaussian(self, ira_img):
@@ -211,8 +222,18 @@ class HeatSourceDetector:
         ira_blurred = cv2.GaussianBlur(ira_uint8, (5, 5), 0)
         
         thresh, mask = cv2.threshold(ira_blurred,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        
+        pixels_above_thresh = ira_blurred[ira_blurred >= thresh]
+        if len(pixels_above_thresh) == 0:
+            return thresh, mask
+        # remove lower 25 percentile of the pixels above the threshold to reduce noise
+        lower_percentile = np.percentile(pixels_above_thresh, 25)
+        mask[ira_img < lower_percentile] = 0
+        # erode mask
+        mask = self.erode_mask(mask)
+        thresh = lower_percentile
+        
         self.erode_mask(mask)
-
         return thresh, mask
     
     def erode_mask(self, mask, kernel_size=3, iterations=1):
@@ -333,7 +354,7 @@ if __name__ == "__main__":
         ira = dataset.get_ira_ij(0, 0)
         ira_highres = dataset.get_ira_highres_ij(0, 0)
         tof = dataset.get_tof_ij(0, 0)
-        thresh, mask = detector.get_thresh_mask_otsu_gaussian(ira_highres)
+        thresh, mask = detector.get_thresh_mask_otsu(ira_highres)
         color_thermal_mask = visualizer.compose_color_and_thermal(img, ira_highres, mask)
         shape = color_thermal_mask.shape[1], color_thermal_mask.shape[0]  # width, height
 
