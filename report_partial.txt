@@ -1,0 +1,169 @@
+COMP4801
+Final Year Project
+Final Report
+Privacy-Preserving Real-Time Bed Occupancy and posture Monitoring Using Low-Resolution Thermal Array
+Supervisor: Prof. Wu Chenshu
+Member: LIU Xuan (3035973799)
+14 April 2026
+
+
+I. Abstract
+Sleep is a vital indicator that contains rich information to infer one's physiological status. Sleep-relevant statistics, such as total time in bed (), is vital for estimation of sleep efficiency, while bed exit events are often closely related to elevated fall risks for elderly people. However, current solutions for monitoring sleep statistics are often unsuitable for everyday usage in bedrooms. Clinical PSG devices require specialized venue and personnels. RGB camera requires adequate ambient illumination which isn't available for sleep monitoring scenario, and together with the high-resolution infrared camera, presents concerns about privacy intrusion. The contact-based solutions such as smartwatches requires adherence to the practice of correctly wearing the device daily, presents discomfort to certain subjects, and has no spatial awareness that can determine the position of human targets. Radar produces sparse points and makes gesture recognition challenging. WiFi presents challenges with generalization to different environments. In this context, the low-resolution, low-cost thermal array (IRA) sensor provides the best trade-off between spatial resolution and privacy preservation, and is extremely sensitive to human presence by detecting the heat signatures. However, sleep monitoring using IRA provides three key challenges, including heat signal occlusion by beddings, thermal residuals, and low-resolution of the images which hinder the accurate per-frame differentiation between interference and human. To address the challenges, we propose a novel IRA-based sleep monitoring system. It leverages a Kalman filter-based heat source tracking module to maintain correct tracking upon occlusion, and a residual detection module that identifies heat residuals based on thermal history of each tracked heat source. The system achieves an overall accuracy of over 93%, demonstrating robustness across different users and environments.
+
+II. Acknowledgement
+I hope to extend my sincere gratitude to my supervisor, Prof. Chenshu Wu, for his guidance and encouragements throught this project. I also hope to thank the members of the HKU AIoT labs, for the devices and technical supports they offered, the venues they provided for data collections, and their participation as subjects for the study's datasets.
+
+III. Table of Contents 
+I. Abstract	1
+II. Acknowledgement	2
+III. Table of Contents	2
+IV. List of Tables	2
+V. List of Figure	2
+1. Introduction	4
+1.1. Project Background	4
+1.2. Literature Review	4
+1.2.1. Importance of privacy-preserving non-contact bed monitoring system	4
+1.2.2. Review of sleep monitoring modalities	5
+1.3. Challenges	6
+1.4. Project's overview and improvements	6
+2. Methodology	6
+2.1. Hardware and data collection setup	6
+2.2. System Design	7
+2.2.1. Data Collection	7
+2.2.2. Heat source identification	7
+2.2.3. Heat source tracking and re-identification	8
+2.2.4.  State-history-based heat source categorization	8
+2.2.5. Framewise posture classification	9
+2.2.6. Output Integration	10
+3. Results and Discussion	10
+3.1. Presence and posture detection	10
+3.1.1. Overview of System Performance (speed, acc, recall)	11
+3.1.2. Performance Analysis	11
+3.2. Baseline and Ablation Study	11
+3.2.1. Ablation study result overview.	11
+3.2.2. System Performance (describe the performance using figures and languages)	12
+3.2.3. Performance analysis	12
+3.3. Case studies: Exit detection	12
+3.3.1. Overview of System performance	12
+3.3.2. Performance Analysis	12
+3.4. Case study: real-life use cases	12
+4. Limitations and Challenges (Future Works)	12
+4.1. Robustness to severe ambient environmental noise	12
+4.2. Fusion with other modalities	12
+4.3. Validation across extended age groups	12
+4.4. Deployment	12
+5. Conclusion	12
+V. References.	13
+
+IV. List of Tables
+V. List of Figure
+1. Introduction
+Sleep is a vital physiological 
+1.1. Project Background
+Bedside sensors for monitoring sleep and bedside activities are becoming widespread in hospitals and nursing homes. 
+1.2. Literature Review
+1.2.1. Importance of privacy-preserving non-contact bed monitoring system
+Bedside activities are a vital physiological indicator that provides important clues about circadian rhythms, physiological status, and bedside-related falls. 
+Bed monitoring provides insights about sleep habits and health. Total time lying in bed is an important parameter for calculating sleep efficiency, which is used for assessing conditions such as insomnia. (evidence that monitoring sleep can leads to more self-awaredness about sleep health?) (circadian rhythms?)
+Bed exit events leading to shift of postures from sitting to standing can trigger positional hypotension and dizziness, which leads to elevated fall risks, resulting in bedside falls accounting for 50% of accidents in nursing homes. The aging of population in HK leads to a shortage in human resource and care-industry and hinders timely intervention by manual supervision. There is a pressing need for a sensing solution that enables automatic in-bed monitoring to provide insights about sleep health as well as timely informing the caregivers of current status. 
+Additionally, home-based monitoring system applied in bedrooms or care facilities has different considerations from the clinics' monitoring device. The contact-based sleep monitoring systems, such as polysomnography,  requires specilized personnels and venues, which cannot provide longitudinal data across an extended period of time. The physical contact with sensors often inflict discomfort, resulting in degraded sleep quality and atypical sleeping statistics that diverge from everyday condition and fail to represent normal sleep patterns. The RGB cameras and NIR cameras that are now commonly deployed in clinics and homes have high resolutions, which potentially leads to privacy leakage. Therefore, we need a non-contact, privacy-preserving method to perform bed monitoring.
+1.2.2. Review of sleep monitoring modalities
+This section reviews the popular modalities applied in sleep monitoring, and discusses their advantages and limitations for home-based bed monitoring.
+The high-resolution RGB and NIR camera captures rich spatial information, and have sufficient libraries and algorithms to accurately perform HAR tasks. However, the two modalities have high spatial resolutions, and enables the possibilities of fine-grain posture and identity detection (or other tasks that leads to privacy leakage? search), which poses severe privacy and security risks (find support: elderly people rejecting the use of cam in bedrooms? actual privacy leakage cases?). Additionally, RGB camera requires sufficient ambient illumination, which often cannot be satisfied for nighttime sleep monitoring conditions.
+Millimeter-wave radar is sensitive to the periodic breathing and heartbeat signals and provide very accurate depth measurements. The signals detected cannot intuitively reveal activities or identity, which well protects the subjects' privacy. However, the angular resolution of radar is often quite limited, leading to sparse spatial points and limited capabilities for posture monitoring.
+WiFi CSI is very sensitive to human motion. The signals inherently preserve privacy, and offer an infrastructure-free solution for sleep monitoring. However, the generalization capability of WiFi is limited. Moving the system to a new environment or changing the layout of the original environment often requires re-training or re-calibration. The penetration capability of WiFi signal also leads to interference by people and activities in adjacent rooms.
+RF-ID and pressure mattresses also provide accurate measurements, but both require installing specific devices on bed, which complicates cleaning procedures and sometimes induces discomfort for the in-bed subjects.
+Thermal array contains an array of thermophilic sensors that detect the heat signals and produces a low-resolution heat map. They are sensitive to human presence by detecting heat signatures. Thermal arrays are passive sensors that do not require ambient illumination and do not induce safety concerns or cross-device interference. The low-resolution nature and the textureless property (due to ghosting effect) of thermal imaging further blurs the fine-grain details of images, which preserves privacy while still enabling coarse-grain posture detection. The devices are relatively low-cost, making them affordable as a normal household appliance. Therefore, the sensor has high potential to become an ideal modality for home-based remote bed monitor task.
+However, thermal arrays present several challenges. First, the thermal signals can be easily occluded by objects such as bedding, which leads to false absence detection. Second, human leaves heat on mattresses which leads to temporary patterns that resemble human, potentially triggering incorrect presence detection and affecting time-critical downstream tasks such as bed exit detection. Thirdly, the low-resolution nature of thermal images makes the framewise distinction between human and heat residual challenging. Therefore, we propose a novel thermal-array-based bed monitoring system that leverages tracking algorithms to distinguish and track heat sources across frames, record heat source state history to obtain richer spatial, temporal and temperature information to distinguish human and interference, and integrate a lightweight CNN model for simple pose classification. The final output is a sequence of framewise labels for bedside postures.
+1.3. Challenges
+1.4. Project's overview and improvements
+This system uses thermal array sensors for in bed monitoring, and leverages the contextual information associated with each frame. Previous studies of thermal array in-bed monitoring mainly relied on frame-wise manipulation and prediction. However, facing the challenges of occlusion and thermal residual, framewise prediction is insufficient to obtain stable and precise predictions, which leads to inaccuracy and instability which hinders the downstream predictions. Keeping a state history of heat sources allows more stable and accurate prediction of in-bed human status.
+2. Methodology
+2.1. Hardware and data collection setup 
+Data collection uses a Meridian Innovation MI0802M6S far-infrared thermal array sensor. The thermal array has a resolution of 80 × 62 pixels, a horizontal field of view (hFOV) of 86 ° and vertical field of view of 63 °. A co-located OV2640 RGB camera module is used to collect ground truth. The device is attached on bed headboard with the normal axis having a 30 ° angle with the horizontal bed plane and parallel to the vertical plane along bed's long axis. The MI08 sensor is interfaced directly with data-logging computer via a USB-UART bridge. The senxor Python library is used to communicate with the thermal array module. 
+2.2. System Design
+This section describes the overall bed monitoring system design. The system consists of six modules. Data collection module is used for saving or streaming data. Heat patch detection module is used to extract and distinguish different heat sources for each frame. Heat residual detection module differentiates human heat source from heat residual based on heat source state history. Heat patch tracker module tracks the heat sources' states and associates heat sources across frames. Posture classification module classifies different in-bed postures. Integration module takes the per-frame prediction and presence to obtain the final sequence of in-bed activities.
+2.2.1. Data Collection 
+The Python collector reads data from the serial device associated with MI0802M6S via a Collector class. The frames are interleaved with RGB images under the same Unix-timestamp in different files to enable alignment. The effective data acquisition rate of the device is 8 frames per second, and data was synchronized via timestamps. Each thermal frame is stored as a Numpy binary file (.npy) containing the 80 × 62 temperature array.
+2.2.2. Heat source identification
+In indoor bedroom environments, humans have a higher temperature than the background, and segmentation can be performed using thresholding. The pixels with temperature values larger than the threshold are considered human foreground, while colder pixels are regarded as background environment (histogram to show the differences). Considering the variability of the environmental temperature, human clothing, and sensor's settings, the measured temperature would vary. However, the histogram of pixel consistently shows two peaks when human is present, disregarding the environmental temperature. Therefore, a thermal map can be considered as a bimodal grayscale image, and instead of a constant threshold, Otsu's method is used to compute a threshold that maximizes the foreground-background differences.
+The binary mask obtained from thresholding contains noises as small separate patches corresponding to high-temperature noise pixels. Erosion is performed using __ to remove patches with small area.
+Finally, to distinguish separate heat sources, the module detects connected components. The connected regions that are less than 5% the area of the image is regarded as noise or ambient interference and removed.
+2.2.3. Heat source tracking and re-identification
+To make the system robust against temporary occlusion, and to record the state history, such as temperature and velocity of the heat sources, we need to perform accurate heat source tracking and re-identification. Simple Online Realtime Tracking (SORT) is a lightweight and accurate algorithm for tracking human in RGB images, using Intersection-over-Union (IoU) based cost matrix and Hungarian algorithm for re-identification of user, and Kalman filter for tracking. To extend the algorithm to thermal sensing, the system replaces the learning-based bounding box detection by the heat sources inputs from heat source identification module (previous section). It maintains a state vector of length 7, containing (x, y, s, r, vx, vy, vr). For each incoming frame's set of heat sources, we compute their IoU matrix with existing heat sources' Kalman prediction result. We then apply Hungarian algorithm to find the best matches. 
+For old patches with a match, the system performs Kalman correction based on new heat source's observation. For the old patches without a match, the system does not perform correction, which means they lack observation, and undergo only one update and no correction for this round. For patches that are not present for an extended period of time and labeled as thermal interference, the system stops tracking them and removes their records. For the human patch that moves outside the FOV for an extended period, we also stop tracking them and remove the record.
+2.2.4.  State-history-based heat source categorization
+To improve the system's robustness against thermal interference, we perform heat residual detection. Heat residual often temporarily resembles human signals, and due to the limited resolution of thermal maps, spatial feature alone is often insufficient to distinguish residue and human. The system leverages the patch history to provide extended information about the patch to facilitate distinction between human and thermal residual. The patch's history was associated by heat source tracking module, which sequentially associates patches across different frames. For each object, a fixed-length history is computed, and three features are computed to distinguish between thermal residual and actual humans.
+First, since the temperature of a heat residual attenuates over time. But the temperature attenuation rate is not constant, which makes a fixed slope threshold impractical. We note that temperature attenuation procedure follows the equation:
+
+A human's temperature remains relatively constant and thus can be regarded as having a k close to 0. A heat residual patch that cools can have a larger positive k. We use the temperature sequence to approximate k.
+Second, we compute the correlation between temperature and time, which confirms that the temperature is monotonically decreasing. 
+Third, we use the Kalman's state to determine the patch's mobility. A heat patch having higher velocity is more likely to be associated with a human target. 
+Therefore, we use empirical evidence to determine the threshold values for k, correlation and velocity threshold. If the velocity is above the threshold, we mark the heat source as a human target. If the correlation is below threshold and k is above the threshold, we mark the heat source as residual.
+2.2.5. Framewise posture classification
+We classify the postures into five common categories: standing by bed, sitting by bed, sitting on bed, lying without cover and lying with cover. We note that a bed exit event is detected when the activity is transitioned from any on-bed posture to standing.
+We use a simple CNN model for posture classification. The model has 3 convolution layers to extract a feature vector of length 8960, and two fully connected layers to produce a classification result of length 5 corresponding to the posture categories. The input thermal arrays of the model are standardized using the variance.
+2.2.6. Output Integration
+This module integrates results from presence detection and results from posture classification and outputs a sequence of per-frame labels. To produce a corrected final result, Viterbi Algorithm is applied to leverage the present posture prediction and predict the actual sequence.
+(2.4. Result visualization)
+3. Results and Discussion 
+3.1. Presence and posture detection 
+This section presents the results and analysis of the system of the system for presence and posture prediction. The model outputs a sequence of posture labels corresponding to the input frames. Performance is assessed using accuracy and F1 score. (are there any metrics that indicates the consistency of the patterns?). The results are visualized using time-series plots, bar charts, and confusion matrix. 
+Accuracy is calculated as:
+
+where  stands for true positive,  stands for true negative,  stands for false positive, and  stands for false negative. This indicates the system's general effectness in performing correct labeling of the data sequence.
+To calculate F1 score, we need to first calculate precision and recall.
+Precision is calculated as:
+
+which indicates the quality of positive predictions.
+Recall is calculated as:
+
+which indicates the amount of positive samples that are correctly identified.
+Since our task does not have specific requirements for the precision and recall, we hope to balance the two parameters. Therefore, we optimize F1 score, calculated as:
+
+
+3.1.1. Overview of System Performance (speed, acc, recall)
+What are the models analyzed.
+what are the data used.
+How is train and test set split.
+What are the performance metrics
+How are results visualized
+3.1.2. Performance Analysis
+Metrics: precision, recall, accuracy, speed (detailed desc)
+3.1.2.1. Overall Performance
+3.1.2.2. Cross-Environment Performance
+3.1.2.3. Cross-User Performance
+3.1.2.4. Impact of preprocessing and hyperparameters 
+3.1.2.5. Limitation and Future Improvements
+3.2. Baseline and Ablation Study
+3.2.1. Ablation study result overview.
+describe the models used.
+describe the train test split.
+3.2.2. System Performance (describe the performance using figures and languages)
+(3.2.1. Baseline models and results overview)
+3.2.3. Performance analysis
+3.3. Case studies: Exit detection
+3.3.1. Overview of System performance
+3.3.2. Performance Analysis
+3.4. Case study: real-life use cases 
+(3.5. Web Development)
+4. Limitations and Challenges (Future Works)
+(3.5. Web Development)
+4.1. Robustness to severe ambient environmental noise
+(3.5. Web Development)
+4.2. Fusion with other modalities
+(3.5. Web Development)
+4.3. Validation across extended age groups
+(3.5. Web Development)
+4.4. Deployment
+(3.5. Web Development)
+5. Conclusion
+(3.5. Web Development)
+V. References.
+
+
+
+
+
+
+

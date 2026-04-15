@@ -1,0 +1,9 @@
+Thank you. Now, we need to 
+1. calculate precision/recall/f1 score for overall/cross-user/cross-environment studies and interpret them. (don't consider augmentation. The boost is not significant and even negative and I decided to drop it)
+2. end-to-end accuracy: Currently, the posture output is end-to-end. It's combined with presence/absence detection (posture pred module predict one of five presence classes and presence module predicts presence/absence)
+3. posture smoothing effect: I hope to first obtain all un-smoothed outputs, then check out smoothing effects.
+4. exit detection will be a case study. I may add a jupyter notebook for that. But that is not the main goal now.
+5. Multi-person is beyond the scope of current research.
+6. I do need to show the grid search results. We will try to do that.
+7. I'm considering if we may need some baseline models, such as pure CNN (already implemented, but currently we need one end-to-end CNN that predicts 5 posture classes + one absence class) and a simple LSTM? I want to demonstrate the non-trivial nature of this study.
+8. I have copied and pasted the word document into report_partial for your reference

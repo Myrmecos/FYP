@@ -4,6 +4,7 @@ import cv2
 class Blob:
     def __init__(self, id=None, mask=None, masked_temps=None, mean_temp=None, centroid=None):
         self.id = id  # unique identifier for the blob
+        self.id_fixed = id
         self.mask = mask
         self.masked_temps = masked_temps # the thermal image with mask applied
         self.mean_temp = mean_temp

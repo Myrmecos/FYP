@@ -12,6 +12,7 @@ from scipy.optimize import linear_sum_assignment
 class Tracker:
     def __init__(self):
         self.blobs = []  # list of Blob objects
+
     
     # move Hungarian algorithm out to here
     def _associate_blobs(self, detected_heat_sources):
@@ -75,6 +76,7 @@ class Tracker:
             new_blob = Blob()
             new_blob.update(mask, masked_temps)
             self.blobs.append(new_blob)
+            
     def _compute_iou(self, mask1, mask2):
         intersection = np.logical_and(mask1, mask2).sum()
         union = np.logical_or(mask1, mask2).sum()
