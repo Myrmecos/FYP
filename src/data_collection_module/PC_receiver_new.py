@@ -75,7 +75,7 @@ def ira_decode_results(packet_data):
 
 # class def
 class DataCollector():
-    def __init__(self, save_path="entry_exit_detection/presence_detection_workspace/data", target_file="case_study_hall2"):
+    def __init__(self, save_path="entry_exit_detection/presence_detection_workspace/data", target_file="case_study_hall_exit_ref"):
         self.UDP_IP = "0.0.0.0"
         self.UDP_PORT = 6900
         self.BUFFER_SIZE = 1460 // 2 + 13  # 数据包的长度：数据部分加上5个字节的头部信息
@@ -86,7 +86,7 @@ class DataCollector():
         print("*DEBUG: save path is ", self.save_path)
         self.makePath()
         self.frame_queue = multiprocessing.Queue()
-        self.thermalHighresCollector = Collector("/dev/cu.usbmodem11401")
+        self.thermalHighresCollector = Collector("/dev/cu.usbmodem1301")
         self.cnt = 0
 
     # the "main" function for displaying and saving data

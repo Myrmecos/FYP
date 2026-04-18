@@ -1,0 +1,601 @@
+(py3.10_temp) entomophile@NickdeMacBook-Air presence_detection_workspace % python /Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/src/experiments/experiment_final_model_gridsearch.py
+k value: 0.002 corr value: -0.75
+pred acc 0.734553058024046
+k value: 0.002 corr value: -0.75
+pred acc 0.5959346353128736
+k value: 0.002 corr value: -0.75
+pred acc 0.6118418707446619
+k value: 0.002 corr value: -0.75
+pred acc 0.6592482257075265
+k value: 0.002 corr value: -0.75
+pred acc 0.6587729543026116
+k value: 0.002 corr value: -0.75
+pred acc 0.6772521518868588
+k value: 0.002 corr value: -0.75
+pred acc 0.6917351527368585
+k value: 0.002 corr value: -0.75
+pred acc 0.6876071413638835
+k value: 0.002 corr value: -0.75
+pred acc 0.689813078578055
+SUMMARY: == k value: 0.002 corr value: -0.75
+SUMMARY: == pred acc 0.689813078578055
+Confusion Matrix:
+[[13074   446]
+ [15269 21874]]
+====================
+k value: 0.002 corr value: -0.8
+pred acc 0.7352848928384736
+k value: 0.002 corr value: -0.8
+pred acc 0.5965324830609805
+k value: 0.002 corr value: -0.8
+pred acc 0.6209318076498057
+k value: 0.002 corr value: -0.8
+pred acc 0.6666958731271357
+k value: 0.002 corr value: -0.8
+pred acc 0.6782049052009045
+k value: 0.002 corr value: -0.8
+pred acc 0.6955930295283439
+k value: 0.002 corr value: -0.8
+pred acc 0.7091686418713865
+k value: 0.002 corr value: -0.8
+pred acc 0.7041644018898692
+k value: 0.002 corr value: -0.8
+pred acc 0.7054457888399819
+SUMMARY: == k value: 0.002 corr value: -0.8
+SUMMARY: == pred acc 0.7054457888399819
+Confusion Matrix:
+[[13067   453]
+ [14470 22673]]
+====================
+k value: 0.002 corr value: -0.85
+pred acc 0.7951907997909043
+k value: 0.002 corr value: -0.85
+pred acc 0.6199282582702271
+k value: 0.002 corr value: -0.85
+pred acc 0.6420347199942965
+k value: 0.002 corr value: -0.85
+pred acc 0.6843949881713836
+k value: 0.002 corr value: -0.85
+pred acc 0.6935119151156723
+k value: 0.002 corr value: -0.85
+pred acc 0.7100171212796398
+k value: 0.002 corr value: -0.85
+pred acc 0.7237666969408325
+k value: 0.002 corr value: -0.85
+pred acc 0.7180875527867208
+k value: 0.002 corr value: -0.85
+pred acc 0.718591477014784
+SUMMARY: == k value: 0.002 corr value: -0.85
+SUMMARY: == pred acc 0.718591477014784
+Confusion Matrix:
+[[13045   475]
+ [13782 23361]]
+====================
+k value: 0.002 corr value: -0.9
+pred acc 0.7951907997909043
+k value: 0.002 corr value: -0.9
+pred acc 0.6233957752092467
+k value: 0.002 corr value: -0.9
+pred acc 0.6451359925854633
+k value: 0.002 corr value: -0.9
+pred acc 0.7081982534536639
+k value: 0.002 corr value: -0.9
+pred acc 0.729294535695649
+k value: 0.002 corr value: -0.9
+pred acc 0.7436498815582709
+k value: 0.002 corr value: -0.9
+pred acc 0.7555102673725717
+k value: 0.002 corr value: -0.9
+pred acc 0.7595434209976167
+k value: 0.002 corr value: -0.9
+pred acc 0.7577324674811993
+SUMMARY: == k value: 0.002 corr value: -0.9
+SUMMARY: == pred acc 0.7577324674811993
+Confusion Matrix:
+[[12988   532]
+ [11742 25401]]
+====================
+k value: 0.002 corr value: -0.95
+pred acc 0.9758494511238892
+k value: 0.002 corr value: -0.95
+pred acc 0.7635711438820247
+k value: 0.002 corr value: -0.95
+pred acc 0.7877588849677396
+k value: 0.002 corr value: -0.95
+pred acc 0.8251701276322323
+k value: 0.002 corr value: -0.95
+pred acc 0.8484953905026961
+k value: 0.002 corr value: -0.95
+pred acc 0.8545863921007576
+k value: 0.002 corr value: -0.95
+pred acc 0.8506523713532552
+k value: 0.002 corr value: -0.95
+pred acc 0.8584688715139859
+k value: 0.002 corr value: -0.95
+pred acc 0.8539762745988196
+SUMMARY: == k value: 0.002 corr value: -0.95
+SUMMARY: == pred acc 0.8539762745988196
+Confusion Matrix:
+[[12375  1145]
+ [ 6253 30890]]
+====================
+k value: 0.003 corr value: -0.75
+pred acc 0.83575535807632
+k value: 0.003 corr value: -0.75
+pred acc 0.6695496213630928
+k value: 0.003 corr value: -0.75
+pred acc 0.7042027590632018
+k value: 0.003 corr value: -0.75
+pred acc 0.7539939834691434
+k value: 0.003 corr value: -0.75
+pred acc 0.7676117585667073
+k value: 0.003 corr value: -0.75
+pred acc 0.779979829725356
+k value: 0.003 corr value: -0.75
+pred acc 0.7898677535830583
+k value: 0.003 corr value: -0.75
+pred acc 0.7915081322908392
+k value: 0.003 corr value: -0.75
+pred acc 0.7973471764404003
+SUMMARY: == k value: 0.003 corr value: -0.75
+SUMMARY: == pred acc 0.7973471764404003
+Confusion Matrix:
+[[13061   459]
+ [ 9808 27335]]
+====================
+k value: 0.003 corr value: -0.8
+pred acc 0.8366962885520125
+k value: 0.003 corr value: -0.8
+pred acc 0.6699083300119569
+k value: 0.003 corr value: -0.8
+pred acc 0.7047374612340926
+k value: 0.003 corr value: -0.8
+pred acc 0.7544320803761793
+k value: 0.003 corr value: -0.8
+pred acc 0.7679844941977487
+k value: 0.003 corr value: -0.8
+pred acc 0.7803316368412412
+k value: 0.003 corr value: -0.8
+pred acc 0.7901778791839267
+k value: 0.003 corr value: -0.8
+pred acc 0.7918635280344525
+k value: 0.003 corr value: -0.8
+pred acc 0.7976827270394568
+SUMMARY: == k value: 0.003 corr value: -0.8
+SUMMARY: == pred acc 0.7976827270394568
+Confusion Matrix:
+[[13054   466]
+ [ 9784 27359]]
+====================
+k value: 0.003 corr value: -0.85
+pred acc 0.8351280710925248
+k value: 0.003 corr value: -0.85
+pred acc 0.6693104822638501
+k value: 0.003 corr value: -0.85
+pred acc 0.7041671122518091
+k value: 0.003 corr value: -0.85
+pred acc 0.753818744706329
+k value: 0.003 corr value: -0.85
+pred acc 0.767537211440499
+k value: 0.003 corr value: -0.85
+pred acc 0.7798860144944532
+k value: 0.003 corr value: -0.85
+pred acc 0.789756994439891
+k value: 0.003 corr value: -0.85
+pred acc 0.79165447171468
+k value: 0.003 corr value: -0.85
+pred acc 0.7974853443341294
+SUMMARY: == k value: 0.003 corr value: -0.85
+SUMMARY: == pred acc 0.7974853443341294
+Confusion Matrix:
+[[13032   488]
+ [ 9772 27371]]
+====================
+k value: 0.003 corr value: -0.9
+pred acc 0.8334553058024046
+k value: 0.003 corr value: -0.9
+pred acc 0.6687923475488242
+k value: 0.003 corr value: -0.9
+pred acc 0.703418529212562
+k value: 0.003 corr value: -0.9
+pred acc 0.7563889132276059
+k value: 0.003 corr value: -0.9
+pred acc 0.7914419899112889
+k value: 0.003 corr value: -0.9
+pred acc 0.8023078546802074
+k value: 0.003 corr value: -0.9
+pred acc 0.8073455463748532
+k value: 0.003 corr value: -0.9
+pred acc 0.8084625998243927
+k value: 0.003 corr value: -0.9
+pred acc 0.8133549138424492
+SUMMARY: == k value: 0.003 corr value: -0.9
+SUMMARY: == pred acc 0.8133549138424492
+Confusion Matrix:
+[[12814   706]
+ [ 8750 28393]]
+====================
+k value: 0.003 corr value: -0.95
+pred acc 0.9758494511238892
+k value: 0.003 corr value: -0.95
+pred acc 0.9880829015544041
+k value: 0.003 corr value: -0.95
+pred acc 0.9885573735429366
+k value: 0.003 corr value: -0.95
+pred acc 0.9896901194544233
+k value: 0.003 corr value: -0.95
+pred acc 0.9884700444797853
+k value: 0.003 corr value: -0.95
+pred acc 0.9776485212374229
+k value: 0.003 corr value: -0.95
+pred acc 0.9668830161929868
+k value: 0.003 corr value: -0.95
+pred acc 0.9681607224986412
+k value: 0.003 corr value: -0.95
+pred acc 0.9631881254564475
+SUMMARY: == k value: 0.003 corr value: -0.95
+SUMMARY: == pred acc 0.9631881254564475
+Confusion Matrix:
+[[11928  1592]
+ [  273 36870]]
+====================
+k value: 0.004 corr value: -0.75
+pred acc 0.9826450601150026
+k value: 0.004 corr value: -0.75
+pred acc 0.7704663212435233
+k value: 0.004 corr value: -0.75
+pred acc 0.7945317791323566
+k value: 0.004 corr value: -0.75
+pred acc 0.8313618972516721
+k value: 0.004 corr value: -0.75
+pred acc 0.8552294809035111
+k value: 0.004 corr value: -0.75
+pred acc 0.8626779557661186
+k value: 0.004 corr value: -0.75
+pred acc 0.867975101344616
+k value: 0.004 corr value: -0.75
+pred acc 0.8749843207760171
+k value: 0.004 corr value: -0.75
+pred acc 0.8754712512089691
+SUMMARY: == k value: 0.004 corr value: -0.75
+SUMMARY: == pred acc 0.8754712512089691
+Confusion Matrix:
+[[13026   494]
+ [ 5815 31328]]
+====================
+k value: 0.004 corr value: -0.8
+pred acc 0.9820177731312075
+k value: 0.004 corr value: -0.8
+pred acc 0.7702271821442805
+k value: 0.004 corr value: -0.8
+pred acc 0.7944604855095712
+k value: 0.004 corr value: -0.8
+pred acc 0.831332690791203
+k value: 0.004 corr value: -0.8
+pred acc 0.8552046318614417
+k value: 0.004 corr value: -0.8
+pred acc 0.862654501958393
+k value: 0.004 corr value: -0.8
+pred acc 0.867930797687349
+k value: 0.004 corr value: -0.8
+pred acc 0.8749425095120625
+k value: 0.004 corr value: -0.8
+pred acc 0.8754317746679036
+SUMMARY: == k value: 0.004 corr value: -0.8
+SUMMARY: == pred acc 0.8754317746679036
+Confusion Matrix:
+[[13013   507]
+ [ 5804 31339]]
+====================
+k value: 0.004 corr value: -0.85
+pred acc 0.9804495556717198
+k value: 0.004 corr value: -0.85
+pred acc 0.7696293343961738
+k value: 0.004 corr value: -0.85
+pred acc 0.7938901365272877
+k value: 0.004 corr value: -0.85
+pred acc 0.8307193551213529
+k value: 0.004 corr value: -0.85
+pred acc 0.8546828019779837
+k value: 0.004 corr value: -0.85
+pred acc 0.8621385181884279
+k value: 0.004 corr value: -0.85
+pred acc 0.8674434574574131
+k value: 0.004 corr value: -0.85
+pred acc 0.8745871137684492
+k value: 0.004 corr value: -0.85
+pred acc 0.8750962240688471
+SUMMARY: == k value: 0.004 corr value: -0.85
+SUMMARY: == pred acc 0.8750962240688471
+Confusion Matrix:
+[[12991   529]
+ [ 5799 31344]]
+====================
+k value: 0.004 corr value: -0.9
+pred acc 0.9777313120752744
+k value: 0.004 corr value: -0.9
+pred acc 0.9888003188521324
+k value: 0.004 corr value: -0.9
+pred acc 0.9896267778847182
+k value: 0.004 corr value: -0.9
+pred acc 0.9908875843336546
+k value: 0.004 corr value: -0.9
+pred acc 0.9909549486867282
+k value: 0.004 corr value: -0.9
+pred acc 0.9906184769097263
+k value: 0.004 corr value: -0.9
+pred acc 0.9791329774272867
+k value: 0.004 corr value: -0.9
+pred acc 0.9799514989338127
+k value: 0.004 corr value: -0.9
+pred acc 0.9745376310127707
+SUMMARY: == k value: 0.004 corr value: -0.9
+SUMMARY: == pred acc 0.9745376310127707
+Confusion Matrix:
+[[12503  1017]
+ [  273 36870]]
+====================
+k value: 0.004 corr value: -0.95
+pred acc 0.9758494511238892
+k value: 0.004 corr value: -0.95
+pred acc 0.9880829015544041
+k value: 0.004 corr value: -0.95
+pred acc 0.9885573735429366
+k value: 0.004 corr value: -0.95
+pred acc 0.9896901194544233
+k value: 0.004 corr value: -0.95
+pred acc 0.9884700444797853
+k value: 0.004 corr value: -0.95
+pred acc 0.9776485212374229
+k value: 0.004 corr value: -0.95
+pred acc 0.9668830161929868
+k value: 0.004 corr value: -0.95
+pred acc 0.9681607224986412
+k value: 0.004 corr value: -0.95
+pred acc 0.9588259676687129
+SUMMARY: == k value: 0.004 corr value: -0.95
+SUMMARY: == pred acc 0.9588259676687129
+Confusion Matrix:
+[[11707  1813]
+ [  273 36870]]
+====================
+k value: 0.005 corr value: -0.75
+pred acc 0.9815995818086775
+k value: 0.005 corr value: -0.75
+pred acc 0.9902750099641291
+k value: 0.005 corr value: -0.75
+pred acc 0.990803122660678
+k value: 0.005 corr value: -0.75
+pred acc 0.9916761587663191
+k value: 0.005 corr value: -0.75
+pred acc 0.9916258728226027
+k value: 0.005 corr value: -0.75
+pred acc 0.9914159063723995
+k value: 0.005 corr value: -0.75
+pred acc 0.9895664887136433
+k value: 0.005 corr value: -0.75
+pred acc 0.989818957227077
+k value: 0.005 corr value: -0.75
+pred acc 0.9799261788682075
+SUMMARY: == k value: 0.005 corr value: -0.75
+SUMMARY: == pred acc 0.9799261788682075
+Confusion Matrix:
+[[12783   737]
+ [  280 36863]]
+====================
+k value: 0.005 corr value: -0.8
+pred acc 0.9815995818086775
+k value: 0.005 corr value: -0.8
+pred acc 0.9902750099641291
+k value: 0.005 corr value: -0.8
+pred acc 0.990803122660678
+k value: 0.005 corr value: -0.8
+pred acc 0.9917053652267882
+k value: 0.005 corr value: -0.8
+pred acc 0.9916507218646721
+k value: 0.005 corr value: -0.8
+pred acc 0.9913924525646739
+k value: 0.005 corr value: -0.8
+pred acc 0.9798639877721906
+k value: 0.005 corr value: -0.8
+pred acc 0.9806622904210395
+k value: 0.005 corr value: -0.8
+pred acc 0.9712808163748692
+SUMMARY: == k value: 0.005 corr value: -0.8
+SUMMARY: == pred acc 0.9712808163748692
+Confusion Matrix:
+[[12338  1182]
+ [  273 36870]]
+====================
+k value: 0.005 corr value: -0.85
+pred acc 0.9804495556717198
+k value: 0.005 corr value: -0.85
+pred acc 0.9898365882821841
+k value: 0.005 corr value: -0.85
+pred acc 0.9904110077353581
+k value: 0.005 corr value: -0.85
+pred acc 0.9913840941616285
+k value: 0.005 corr value: -0.85
+pred acc 0.9913773824019084
+k value: 0.005 corr value: -0.85
+pred acc 0.9911344606796914
+k value: 0.005 corr value: -0.85
+pred acc 0.9796203176572226
+k value: 0.005 corr value: -0.85
+pred acc 0.9804323284692896
+k value: 0.005 corr value: -0.85
+pred acc 0.9710636953990092
+SUMMARY: == k value: 0.005 corr value: -0.85
+SUMMARY: == pred acc 0.9710636953990092
+Confusion Matrix:
+[[12327  1193]
+ [  273 36870]]
+====================
+k value: 0.005 corr value: -0.9
+pred acc 0.9777313120752744
+k value: 0.005 corr value: -0.9
+pred acc 0.9888003188521324
+k value: 0.005 corr value: -0.9
+pred acc 0.9894841906391473
+k value: 0.005 corr value: -0.9
+pred acc 0.9906247261894331
+k value: 0.005 corr value: -0.9
+pred acc 0.9907313073081033
+k value: 0.005 corr value: -0.9
+pred acc 0.9904073926401952
+k value: 0.005 corr value: -0.9
+pred acc 0.9789336109695855
+k value: 0.005 corr value: -0.9
+pred acc 0.9796588200861313
+k value: 0.005 corr value: -0.9
+pred acc 0.9696820164617176
+SUMMARY: == k value: 0.005 corr value: -0.9
+SUMMARY: == pred acc 0.9696820164617176
+Confusion Matrix:
+[[12257  1263]
+ [  273 36870]]
+====================
+k value: 0.005 corr value: -0.95
+pred acc 0.8127548353371667
+k value: 0.005 corr value: -0.95
+pred acc 0.9259067357512953
+k value: 0.005 corr value: -0.95
+pred acc 0.9329483477702919
+k value: 0.005 corr value: -0.95
+pred acc 0.943952802359882
+k value: 0.005 corr value: -0.95
+pred acc 0.9319633228139055
+k value: 0.005 corr value: -0.95
+pred acc 0.9243145624692168
+k value: 0.005 corr value: -0.95
+pred acc 0.916509757880513
+k value: 0.005 corr value: -0.95
+pred acc 0.920621315382364
+k value: 0.005 corr value: -0.95
+pred acc 0.9139411404772714
+SUMMARY: == k value: 0.005 corr value: -0.95
+SUMMARY: == pred acc 0.9139411404772714
+Confusion Matrix:
+[[ 9431  4089]
+ [  271 36872]]
+====================
+k value: 0.006 corr value: -0.75
+pred acc 0.8979613173026659
+k value: 0.006 corr value: -0.75
+pred acc 0.9583897967317656
+k value: 0.006 corr value: -0.75
+pred acc 0.960788507468007
+k value: 0.006 corr value: -0.75
+pred acc 0.9457636029089634
+k value: 0.006 corr value: -0.75
+pred acc 0.9523146882687672
+k value: 0.006 corr value: -0.75
+pred acc 0.9539132678190304
+k value: 0.006 corr value: -0.75
+pred acc 0.9444653656159316
+k value: 0.006 corr value: -0.75
+pred acc 0.9465024877702053
+k value: 0.006 corr value: -0.75
+pred acc 0.9390284823243787
+SUMMARY: == k value: 0.006 corr value: -0.75
+SUMMARY: == pred acc 0.9390284823243787
+Confusion Matrix:
+[[10704  2816]
+ [  273 36870]]
+====================
+k value: 0.006 corr value: -0.8
+pred acc 0.8979613173026659
+k value: 0.006 corr value: -0.8
+pred acc 0.9583897967317656
+k value: 0.006 corr value: -0.8
+pred acc 0.960788507468007
+k value: 0.006 corr value: -0.8
+pred acc 0.9457636029089634
+k value: 0.006 corr value: -0.8
+pred acc 0.9523146882687672
+k value: 0.006 corr value: -0.8
+pred acc 0.9539132678190304
+k value: 0.006 corr value: -0.8
+pred acc 0.9444653656159316
+k value: 0.006 corr value: -0.8
+pred acc 0.9465024877702053
+k value: 0.006 corr value: -0.8
+pred acc 0.9390284823243787
+SUMMARY: == k value: 0.006 corr value: -0.8
+SUMMARY: == pred acc 0.9390284823243787
+Confusion Matrix:
+[[10704  2816]
+ [  273 36870]]
+====================
+k value: 0.006 corr value: -0.85
+pred acc 0.810559330893884
+k value: 0.006 corr value: -0.85
+pred acc 0.9250697489039458
+k value: 0.006 corr value: -0.85
+pred acc 0.9309877731436923
+k value: 0.006 corr value: -0.85
+pred acc 0.9213470019568328
+k value: 0.006 corr value: -0.85
+pred acc 0.9315408890987252
+k value: 0.006 corr value: -0.85
+pred acc 0.9343058845603583
+k value: 0.006 corr value: -0.85
+pred acc 0.9259464368783643
+k value: 0.006 corr value: -0.85
+pred acc 0.9290253794372204
+k value: 0.006 corr value: -0.85
+pred acc 0.9225272881590115
+SUMMARY: == k value: 0.006 corr value: -0.85
+SUMMARY: == pred acc 0.9225272881590115
+Confusion Matrix:
+[[ 9866  3654]
+ [  271 36872]]
+====================
+k value: 0.006 corr value: -0.9
+pred acc 0.810559330893884
+k value: 0.006 corr value: -0.9
+pred acc 0.9250697489039458
+k value: 0.006 corr value: -0.9
+pred acc 0.9309877731436923
+k value: 0.006 corr value: -0.9
+pred acc 0.9213470019568328
+k value: 0.006 corr value: -0.9
+pred acc 0.9315408890987252
+k value: 0.006 corr value: -0.9
+pred acc 0.9343058845603583
+k value: 0.006 corr value: -0.9
+pred acc 0.9259464368783643
+k value: 0.006 corr value: -0.9
+pred acc 0.9290253794372204
+k value: 0.006 corr value: -0.9
+pred acc 0.9218759252314312
+SUMMARY: == k value: 0.006 corr value: -0.9
+SUMMARY: == pred acc 0.9218759252314312
+Confusion Matrix:
+[[ 9833  3687]
+ [  271 36872]]
+====================
+k value: 0.006 corr value: -0.95
+pred acc 0.7334030318870883
+k value: 0.006 corr value: -0.95
+pred acc 0.8956556396970905
+k value: 0.006 corr value: -0.95
+pred acc 0.8960895447902185
+k value: 0.006 corr value: -0.95
+pred acc 0.8927538771576272
+k value: 0.006 corr value: -0.95
+pred acc 0.8884029520661978
+k value: 0.006 corr value: -0.95
+pred acc 0.8832000375260923
+k value: 0.006 corr value: -0.95
+pred acc 0.8776776022860687
+k value: 0.006 corr value: -0.95
+pred acc 0.8732073420579504
+k value: 0.006 corr value: -0.95
+pred acc 0.8691747429090263
+SUMMARY: == k value: 0.006 corr value: -0.95
+SUMMARY: == pred acc 0.8691747429090263
+Confusion Matrix:
+[[ 7163  6357]
+ [  271 36872]]
+====================

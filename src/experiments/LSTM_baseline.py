@@ -37,6 +37,8 @@ from sklearn.metrics import (
 )
 from tqdm import tqdm
 
+from collections import Counter
+
 from dataset.dataset import ThermalDataset, ThermalDatasetAggregator
 from posture_detection_module.utils import (
     ThermalInvariantPreprocessor, filter_dataset, remap_labels
@@ -198,15 +200,10 @@ TEST_PATH  = WORKSPACE / "data" / "office1_0"
 
 # ── load datasets ────────────────────────────────────────────────────────────
 print("Loading training datasets …")
-train_datasets = []
-for path in TRAIN_PATHS:
-    ds = ThermalDataset(str(path), noCam=True)
-    ds = filter_dataset(ds, label_to_index)
-    train_datasets.append(ds)
-    print(f"  {path.name}: {len(ds)} frames")
 
 # Use ThermalDatasetAggregator to combine training sets
 train_ds = ThermalDatasetAggregator([str(p) for p in TRAIN_PATHS])
+train_ds = filter_dataset(train_ds, label_to_index)
 print(f"  Combined training samples (frames) after filter: {len(train_ds)}")
 
 print("Loading test dataset …")
@@ -253,59 +250,80 @@ print(f"\nModel on: {device}")
 print(model)
 
 
+# ── class weights for imbalanced data ───────────────────────────────────────
+train_labels_all = [train_seq_ds[i][1] for i in range(len(train_seq_ds))]
+label_counts = Counter(train_labels_all)
+total = len(train_labels_all)
+class_weights = torch.tensor([
+    total / (NUM_CLASSES * label_counts.get(index_to_raw[i], 1))
+    for i in range(NUM_CLASSES)
+], dtype=torch.float32).to(device)
+print(f"\nClass weights: {class_weights}")
+criterion = nn.CrossEntropyLoss(weight=class_weights)
+
 # ── training ──────────────────────────────────────────────────────────────────
-print("\n=== Training ===")
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+# print("\n=== Training ===")
+# optimizer = torch.optim.Adam(model.parameters(), lr=5e-4, weight_decay=1e-5)
+# scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+#     optimizer, mode='max', factor=0.5, patience=3, min_lr=1e-6
+# )
 
-num_epochs = 10
-best_val_acc = 0.0
+# num_epochs = 25
+# best_val_acc = 0.0
+# patience = 5
+# patience_counter = 0
 
-for epoch in range(num_epochs):
-    model.train()
-    total_loss = 0
-    for batch in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}"):
-        thermal = batch[0]['ira_highres'].to(device=device, dtype=torch.float32)
-        labels = remap_labels(batch[1], label_to_index, device)
+# for epoch in range(num_epochs):
+#     model.train()
+#     total_loss = 0
+#     for batch in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}"):
+#         thermal = batch[0]['ira_highres'].to(device=device, dtype=torch.float32)
+#         labels = remap_labels(batch[1], label_to_index, device)
 
-        outputs = model(thermal)
-        loss = criterion(outputs, labels)
+#         outputs = model(thermal)
+#         loss = criterion(outputs, labels)
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+#         optimizer.zero_grad()
+#         loss.backward()
+#         optimizer.step()
 
-        total_loss += loss.item()
+#         total_loss += loss.item()
 
-    avg_loss = total_loss / len(train_loader)
-    print(f"Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}")
+#     avg_loss = total_loss / len(train_loader)
 
-    # Validate
-    model.eval()
-    correct, total = 0, 0
-    with torch.no_grad():
-        for batch in val_loader:
-            thermal = batch[0]['ira_highres'].to(device=device, dtype=torch.float32)
-            labels = remap_labels(batch[1], label_to_index, device)
+#     # Validate
+#     model.eval()
+#     correct, total = 0, 0
+#     with torch.no_grad():
+#         for batch in val_loader:
+#             thermal = batch[0]['ira_highres'].to(device=device, dtype=torch.float32)
+#             labels = remap_labels(batch[1], label_to_index, device)
 
-            outputs = model(thermal)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+#             outputs = model(thermal)
+#             _, predicted = torch.max(outputs.data, 1)
+#             total += labels.size(0)
+#             correct += (predicted == labels).sum().item()
 
-    val_acc = correct / total
-    print(f"Validation Accuracy: {val_acc:.4f}")
+#     val_acc = correct / total
+#     scheduler.step(val_acc)
+#     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}, Val Acc: {val_acc:.4f}, LR: {optimizer.param_groups[0]['lr']:.6f}")
 
-    if val_acc > best_val_acc:
-        best_val_acc = val_acc
-        WEIGHT_PATH = WORKSPACE / "weights" / "LSTM_baseline_6class.pth"
-        torch.save(model.state_dict(), WEIGHT_PATH)
-        print(f"  -> Best model saved (acc={val_acc:.4f})")
+#     if val_acc > best_val_acc:
+#         best_val_acc = val_acc
+#         patience_counter = 0
+#         WEIGHT_PATH = WORKSPACE / "weights" / "LSTM_baseline_6class_4.18.pth"
+#         torch.save(model.state_dict(), WEIGHT_PATH)
+#         print(f"  -> Best model saved (acc={val_acc:.4f})")
+#     else:
+#         patience_counter += 1
+#         if patience_counter >= patience:
+#             print(f"  Early stopping at epoch {epoch+1}")
+#             break
 
-print(f"\nTraining complete. Best val acc: {best_val_acc:.4f}")
+# print(f"\nTraining complete. Best val acc: {best_val_acc:.4f}")
 
 # ── load best model ──────────────────────────────────────────────────────────
-WEIGHT_PATH = WORKSPACE / "weights" / "LSTM_baseline_6class.pth"
+WEIGHT_PATH = WORKSPACE / "weights" / "LSTM_baseline_6class_4.18.pth"
 model.load_state_dict(torch.load(WEIGHT_PATH))
 print(f"Loaded best model from {WEIGHT_PATH}")
 

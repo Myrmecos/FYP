@@ -214,12 +214,12 @@ class Tracker:
                         break
                 
                 # check blob velocity and shape changes
-                velocity = blob.get_velocity()
-                if velocity > 1:# or blob.get_bbox_change_velocity() > 5:  # if the blob is moving fast or changing shape rapidly, it is likely a human even if the temp trend is decreasing
-                    blob.is_residual = False
-                    blob.id = blob.id_fixed  # restore original id if it was marked as residual before
-                    # print("Blob is moving fast or changing shape rapidly, likely human. Blob ID: ", blob.id_fixed)
-                    continue
+                # velocity = blob.get_velocity()
+                # if velocity > 1:# or blob.get_bbox_change_velocity() > 5:  # if the blob is moving fast or changing shape rapidly, it is likely a human even if the temp trend is decreasing
+                #     blob.is_residual = False
+                #     blob.id = blob.id_fixed  # restore original id if it was marked as residual before
+                #     # print("Blob is moving fast or changing shape rapidly, likely human. Blob ID: ", blob.id_fixed)
+                #     continue
                     
                 # corr and temp difference between current temp and background temp can jointly determine if the blob is residual
                 # we know that corr threshold should be large if temp diff is large, 
@@ -243,6 +243,11 @@ class Tracker:
 
                 
                 velocity = blob.get_velocity()
+                if velocity > 1:  # if the blob is moving fast, it is likely a human even if the temp trend is decreasing
+                    blob.is_residual = False
+                    blob.id = blob.id_fixed  # restore original id if it was marked as residual before
+                    # print("Blob is moving fast, likely human. Blob ID: ", blob.id_fixed)
+                    continue
 
         
         

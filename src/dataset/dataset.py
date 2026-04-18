@@ -4,6 +4,7 @@ import pickle
 import sys
 from pathlib import Path
 from torch.utils.data import dataset
+import numpy as np
 
 import cv2
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -25,15 +26,34 @@ class ThermalDatasetAggregator():
         self.ira_files = []
         self.tof_files = []
         self.annotations = []
+        self.noCam = True
         for dataset in self.datasets:
             self.img_files.extend(dataset.img_files)
             self.ira_files.extend(dataset.ira_files)
             self.tof_files.extend(dataset.tof_files)
             self.annotations.extend(dataset.annotations_expanded)
+        self.annotations_expanded = self.annotations
     def __len__(self):
         "total number of frames"
         lngth = min(len(self.img_files), len(self.ira_files), len(self.tof_files))
         return lngth
+    
+    def __getitem__(self, index):
+        if not self.noCam:
+            img = self.get_image(index)
+        else:
+            img = np.array([0])
+        ira = self.get_ira(index)
+        ira_highres = self.get_ira_highres(index)
+        tof = self.get_tof(index)
+        label = self.get_label(index)
+        data_dict = {
+            "image": img,
+            "ira": ira,
+            "ira_highres": ira_highres,
+            "tof": tof,
+        }
+        return data_dict, label
     
     def subset_number(self):
         """How many datasets are aggregated"""
@@ -81,6 +101,13 @@ class ThermalDatasetAggregator():
             index -= len(self.datasets[dataset_index])
             dataset_index += 1
         return self.datasets[dataset_index].get_tof(index)
+    
+    def get_label(self, index):
+        dataset_index = 0
+        while index >= len(self.datasets[dataset_index]):
+            index -= len(self.datasets[dataset_index])
+            dataset_index += 1
+        return self.datasets[dataset_index].get_label(index)
 
 class ThermalDataset(dataset.Dataset):
     def __init__(self, dataset_base_dir, noCam = False):
@@ -105,7 +132,7 @@ class ThermalDataset(dataset.Dataset):
         if not self.noCam:
             img = self.get_image(index)
         else:
-            img = None
+            img = np.array([0])
         ira = self.get_ira(index)
         ira_highres = self.get_ira_highres(index)
         tof = self.get_tof(index)

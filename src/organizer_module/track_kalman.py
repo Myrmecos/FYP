@@ -15,18 +15,21 @@ HUMAN_ENV_THRESH = 4 # temperature differences between human and env
 TEMP_DECREASE_THRESH = -0.9 # temperature decrease correlation threshold
 K_THRESH = 0.004 # THRESHOLD for attenuation coefficient. Exceeding the threshold indicates decreasing trend
 HISTORY_THRESH = 100
+VELOCITY_THRESH = 1.0 # if the blob is moving faster than this threshold, it is likely a human even if the temp trend is decreasing
 
 class Tracker:
-    def __init__(self, hung_thresh = HUNG_THRESH, size_thresh = SIZE_THRESH, human_env_thresh = HUMAN_ENV_THRESH, temp_decrease_thresh = TEMP_DECREASE_THRESH, k_thresh = K_THRESH, history_thresh = HISTORY_THRESH):
+    def __init__(self, hung_thresh = HUNG_THRESH, size_thresh = SIZE_THRESH, human_env_thresh = HUMAN_ENV_THRESH, temp_decrease_thresh = TEMP_DECREASE_THRESH, k_thresh = K_THRESH, history_thresh = HISTORY_THRESH, velocity_thresh = VELOCITY_THRESH):
         self.blobs = []  # list of KalmanBlob objects
         self.residual_detector = ResidualHeatDetector()
         self.relations = dict() # adjacency list to track the relations between blobs
+        self.split_events = [] # list to record the frame indices of detected split events (bed exits)
 
         self.HUNG_THRESH = hung_thresh
         self.SIZE_THRESH = size_thresh
         self.HUMAN_ENV_THRESH = human_env_thresh
         self.TEMP_DECREASE_THRESH = temp_decrease_thresh
         self.K_THRESH = k_thresh
+        self.VELOCITY_THRESH = velocity_thresh
         self.HISTORY_THRESHOLD = history_thresh
     # move Hungarian algorithm out to here
     def _associate_blobs(self, detected_heat_sources, frame_shape):
@@ -136,6 +139,7 @@ class Tracker:
 
             if residual_index is not None:
                 print("Human left the bed! Residual heat detected. Frame index: ", idx)
+                self.split_event.append(idx)
                 return_dict["bed_exit"] = True
                 if residual_index == -1:
                     new_blob.is_residual = True
@@ -213,7 +217,7 @@ class Tracker:
                 
                 # check blob velocity and shape changes
                 velocity = blob.get_velocity()
-                if velocity > 1:# or blob.get_bbox_change_velocity() > 5:  # if the blob is moving fast or changing shape rapidly, it is likely a human even if the temp trend is decreasing
+                if velocity > self.VELOCITY_THRESH:# or blob.get_bbox_change_velocity() > 5:  # if the blob is moving fast or changing shape rapidly, it is likely a human even if the temp trend is decreasing
                     blob.is_residual = False
                     blob.id = blob.id_fixed  # restore original id if it was marked as residual before
                     # print("Blob is moving fast or changing shape rapidly, likely human. Blob ID: ", blob.id_fixed)

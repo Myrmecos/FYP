@@ -36,3 +36,14 @@ train_all: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detect
         '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_sf_0',
         '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_wjs_0'
         ]
+
+hyperparam_tune: ['/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_3',
+        '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_2',
+        '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_0',
+        '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office1_0',
+        '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office2_0',
+        '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/hall5',
+        '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_lcx_1',
+        '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_sf_0',
+        '/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/data/office0_wjs_0'
+        ]

@@ -136,8 +136,19 @@ print(f"PNG saved → {png_path}")
 plt.close()
 
 # ── Print summary statistics ──────────────────────────────────────────────────
+valid_mask = [g in RAW_LABELS for g in y_true]
+y_true = [y_true[i] for i in range(len(y_true)) if valid_mask[i]]
+y_pred = [y_pred[i] for i in range(len(y_pred)) if valid_mask[i]]
+
 from sklearn.metrics import classification_report, accuracy_score
 
 print(f"\nOverall Accuracy: {accuracy_score(y_true, y_pred):.4f}")
 print("\nClassification Report:")
-print(classification_report(y_true, y_pred, labels=RAW_LABELS, target_names=LABEL_NAMES))
+# print 4 decimals in classification report
+print(classification_report(y_true, y_pred, labels=RAW_LABELS, target_names=LABEL_NAMES, digits = 4))
+
+# print confusion matrix
+cm = confusion_matrix(y_true, y_pred, labels=RAW_LABELS)
+print("\nConfusion Matrix (rows=true labels, cols=predicted labels):")
+print("Labels:", LABEL_NAMES)
+print(cm)

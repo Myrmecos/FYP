@@ -117,7 +117,7 @@ def imgs_to_vid(data_dir, output_vid_path, fps=10):
     print(f"Video saved to {output_vid_path}")
 
 def thermal_to_vid(path = None, output_vid_path = None, fps = 30):
-    dataset = ThermalDataset(path)
+    dataset = ThermalDataset(path, noCam=True)
     detector = HeatSourceDetector()
     visualizer = DataVisualizer()
     if output_vid_path is None:
@@ -125,7 +125,8 @@ def thermal_to_vid(path = None, output_vid_path = None, fps = 30):
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     first_ira_highres = dataset.get_ira_highres(0)
     height, width = first_ira_highres.shape
-    video = cv2.VideoWriter(output_vid_path, fourcc, fps, (width, height))
+    scale = 5
+    video = cv2.VideoWriter(output_vid_path, fourcc, fps, (width*scale, height*scale))
 
     for idx in range(len(dataset)):
         ira_highres = dataset.get_ira_highres(idx)
@@ -135,12 +136,15 @@ def thermal_to_vid(path = None, output_vid_path = None, fps = 30):
        
         # color the thermal
         thermal_colored = utils.colorize_thermal_map(ira_highres)
+        thermal_colored = cv2.resize(thermal_colored, (width*scale, height*scale))
 
         # plot the plot the centroid as a white cross on the thermal map:
         # please help write it:
         if centroid != (-1, -1):
             cv2.drawMarker(thermal_colored, centroid, (255, 255, 255), markerType=cv2.MARKER_CROSS, markerSize=20, thickness=2)
-        
+        # draw index
+        # put it lower
+        cv2.putText(thermal_colored, str(idx), (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         # save to video
         video.write(thermal_colored)
     video.release()
@@ -185,17 +189,19 @@ if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Usage: python imgs_to_vid.py <img_dir> <output_vid_path> <fps> <all/thermal/label>")
     else:
+        print("argument 4:", sys.argv[4])
+        print(sys.argv[4]=='thermal')
         if sys.argv[4] == "thermal":
             path = sys.argv[1]
             output_vid_path = sys.argv[2]
             fps = int(sys.argv[3])
             thermal_to_vid(path, output_vid_path, fps)
-        if sys.argv[4] == "blobs":
+        elif sys.argv[4] == "blobs":
             path = sys.argv[1]
             output_vid_path = sys.argv[2]
             fps = int(sys.argv[3])
             thermal_to_vid_with_blobs(path, output_vid_path, fps)
-        if sys.argv[4] == "label":
+        elif sys.argv[4] == "label":
             path = sys.argv[1]
             output_vid_path = sys.argv[2]
             fps = int(sys.argv[3])

@@ -175,12 +175,13 @@ class ThermalNormalize(torch.utils.data.Dataset):
         return data_dict, label
 
 
-def train_model(model, train_dataloader, val_dataloader, label_to_index = label_to_index, num_epochs=10, learning_rate=1e-3):
+def train_model(model, train_dataloader, val_dataloader, label_to_index = label_to_index, num_epochs=10, learning_rate=1e-3, save_path = 'model.pth'):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    best_loss = float('inf')
     
     for epoch in range(num_epochs):
         model.train()
@@ -213,9 +214,14 @@ def train_model(model, train_dataloader, val_dataloader, label_to_index = label_
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
-        
+
         accuracy = correct / total
         print(f"Validation Accuracy: {accuracy:.4f}")
+
+        if avg_loss < best_loss:
+            best_loss = avg_loss
+            torch.save(model.state_dict(), save_path)
+            print(f"Model saved to {save_path} with loss {best_loss:.4f}")
 
 
 def test_model(model, test_dataloader, label_to_index):
