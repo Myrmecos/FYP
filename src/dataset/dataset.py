@@ -24,13 +24,13 @@ class ThermalDatasetAggregator():
         self.datasets = [ThermalDataset(dataset_base_dir) for dataset_base_dir in dataset_base_dirs]
         self.img_files = []
         self.ira_files = []
-        self.tof_files = []
+        # self.tof_files = []
         self.annotations = []
         self.noCam = True
         for dataset in self.datasets:
             self.img_files.extend(dataset.img_files)
             self.ira_files.extend(dataset.ira_files)
-            self.tof_files.extend(dataset.tof_files)
+            # self.tof_files.extend(dataset.tof_files)
             self.annotations.extend(dataset.annotations_expanded)
         self.annotations_expanded = self.annotations
     def __len__(self):
@@ -45,7 +45,8 @@ class ThermalDatasetAggregator():
             img = np.array([0])
         ira = self.get_ira(index)
         ira_highres = self.get_ira_highres(index)
-        tof = self.get_tof(index)
+        # tof = self.get_tof(index)
+        tof = np.array([0])
         label = self.get_label(index)
         data_dict = {
             "image": img,
@@ -123,7 +124,7 @@ class ThermalDataset(dataset.Dataset):
             self.img_files = sorted([f for f in os.listdir(self.camera_dir) if f.endswith('.png') or f.endswith('.jpg')])
         self.ira_files = sorted([f for f in os.listdir(self.ira_dir) if f.endswith('.pkl')])
         # ira_highres_files = sorted([f for f in os.listdir(ira_highres_dir) if f.endswith('.pkl')])
-        self.tof_files = sorted([f for f in os.listdir(self.tof_dir) if f.endswith('.pkl')])
+        # self.tof_files = sorted([f for f in os.listdir(self.tof_dir) if f.endswith('.pkl')])
         self.annotations_expanded = [-1 for _ in range(self.__len__())]  # type: List[int]
         self.process_annotations()
         
@@ -135,7 +136,9 @@ class ThermalDataset(dataset.Dataset):
             img = np.array([0])
         ira = self.get_ira(index)
         ira_highres = self.get_ira_highres(index)
-        tof = self.get_tof(index)
+        # tof = self.get_tof(index)
+        ira = np.array([0])
+        tof = np.array([0])
         label = self.get_label(index)
         data_dict = {
             "image": img,
@@ -143,6 +146,7 @@ class ThermalDataset(dataset.Dataset):
             "ira_highres": ira_highres,
             "tof": tof,
         }
+        # print("return data:", data_dict)
         return data_dict, label
     
     def process_annotations(self):
@@ -204,7 +208,7 @@ class ThermalDataset(dataset.Dataset):
             traceback.print_exc()
     def __len__(self):
         if self.noCam:
-            lngth = min(len(self.ira_files), len(self.tof_files))
+            lngth = len(self.ira_files)
         else:
             lngth = min(len(self.img_files), len(self.ira_files), len(self.tof_files))
         return lngth

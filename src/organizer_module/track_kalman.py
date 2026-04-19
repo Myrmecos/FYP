@@ -139,7 +139,7 @@ class Tracker:
 
             if residual_index is not None:
                 print("Human left the bed! Residual heat detected. Frame index: ", idx)
-                self.split_event.append(idx)
+                # self.split_event.append(idx)
                 return_dict["bed_exit"] = True
                 if residual_index == -1:
                     new_blob.is_residual = True
@@ -217,7 +217,8 @@ class Tracker:
                 
                 # check blob velocity and shape changes
                 velocity = blob.get_velocity()
-                if velocity > self.VELOCITY_THRESH:# or blob.get_bbox_change_velocity() > 5:  # if the blob is moving fast or changing shape rapidly, it is likely a human even if the temp trend is decreasing
+                temp_diff = abs(blob.mean_temp - background_temp)
+                if velocity > self.VELOCITY_THRESH and temp_diff > self.TEMP_DIFF_THRESH:  # or blob.get_bbox_change_velocity() > 5:  # if the blob is moving fast or changing shape rapidly, it is likely a human even if the temp trend is decreasing
                     blob.is_residual = False
                     blob.id = blob.id_fixed  # restore original id if it was marked as residual before
                     # print("Blob is moving fast or changing shape rapidly, likely human. Blob ID: ", blob.id_fixed)
