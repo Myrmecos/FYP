@@ -31,6 +31,7 @@ class Tracker:
         self.K_THRESH = k_thresh
         self.VELOCITY_THRESH = velocity_thresh
         self.HISTORY_THRESHOLD = history_thresh
+        self.TEMP_DIFF_THRESH = 3
     # move Hungarian algorithm out to here
     def _associate_blobs(self, detected_heat_sources, frame_shape):
         """

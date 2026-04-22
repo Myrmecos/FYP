@@ -15,15 +15,8 @@ import matplotlib.pyplot as plt
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 WORKSPACE = Path("/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace")
-
-# Which model to visualise: choose LSTM or LSTM_copy
-MODEL_DIR = WORKSPACE / "output/case_study/LSTM"   # <-- change if you want LSTM_copy
-PREDICTIONS_PATH = MODEL_DIR / "predictions.json"
+PREDICTIONS_PATH = WORKSPACE / "output/case_study/LSTM_copy/predictions.json"
 TEST_PATH = WORKSPACE / "data" / "office1_0"
-
-# LSTM sequence params (must match how LSTM_baseline.py generated predictions)
-SEQ_LEN  = 16
-STRIDE   = 8
 
 sys.path.insert(0, str(WORKSPACE / "src"))
 from dataset.dataset import ThermalDataset
@@ -33,50 +26,35 @@ with open(PREDICTIONS_PATH, "r") as f:
     raw_pred = json.load(f)
 
 if isinstance(raw_pred, dict):
-    num_seqs = len(raw_pred)
-    y_pred_seq = [int(raw_pred[str(i)]) for i in range(num_seqs)]
+    num_preds = len(raw_pred)
+    y_pred = [int(raw_pred[str(i)]) for i in range(num_preds)]
 else:
-    num_seqs = len(raw_pred)
-    y_pred_seq = [int(v) for v in raw_pred]
+    num_preds = len(raw_pred)
+    y_pred = [int(v) for v in raw_pred]
 
-print(f"Loaded {num_seqs} sequence-level predictions from {PREDICTIONS_PATH.name}")
+print(f"Loaded {num_preds} predictions from {PREDICTIONS_PATH.name}")
 
-# ── Load ground truth (full frame-level) ───────────────────────────────────────
+# ── Load ground truth ───────────────────────────────────────────────────────────
 test_ds = ThermalDataset(str(TEST_PATH), noCam=True)
-all_gt_frames = test_ds.annotations_expanded[:]   # full frame-level GT
-num_frames = len(all_gt_frames)
-print(f"Total frames in dataset: {num_frames}")
+# all_gt = test_ds.annotations_expanded[:num_preds]
+all_gt = [test_ds.annotations_expanded[i] for i in range(0, len(test_ds.annotations_expanded), 8)]
+plt.plot(all_gt, label='Ground Truth', alpha=0.7)
+plt.show()
 
-# ── Map sequence-level predictions → per-frame predictions ─────────────────────
-# LSTM predicted every STRIDE frames starting at frame 0, each prediction covers
-# SEQ_LEN frames (label = last frame's label).  We expand each sequence prediction
-# to all frames it covers, then truncate to the dataset length.
-y_pred_expanded = []
-for seq_idx in range(num_seqs):
-    start_frame = seq_idx * STRIDE
-    end_frame   = start_frame + SEQ_LEN
-    # prediction for this sequence applies to frames [start_frame, end_frame)
-    y_pred_expanded.extend([y_pred_seq[seq_idx]] * min(SEQ_LEN, num_frames - start_frame))
+all_gt = test_ds.annotations_expanded[:num_preds]
+print(f"Loaded {len(all_gt)} ground-truth labels from {TEST_PATH.name}")
 
-# Trim to dataset length so arrays are comparable
-y_pred_per_frame = np.array(y_pred_expanded[:num_frames], dtype=int)
-print(f"Expanded to {len(y_pred_per_frame)} per-frame predictions")
-
-# ── Downsample GT to match LSTM cadence (every STRIDE frames) ─────────────────
-# This gives one GT label per LSTM sequence position, matching y_pred_seq
-gt_downsampled = np.array([all_gt_frames[i] for i in range(0, num_frames, STRIDE)])[:num_seqs]
-pred_downsampled = np.array(y_pred_seq[:num_seqs])
-print(f"Downsampled GT: {len(gt_downsampled)} | Downsampled Pred: {len(pred_downsampled)}")
+plt.plot(y_pred, label='Predicted', alpha=0.7)
+plt.show()
 
 # ── Binary presence: label != 0 → present (1), label == 0 → absent (0) ─────────
-gt_present = np.array([(g != 0 and g != -1) for g in gt_downsampled], dtype=int)
-pr_present = np.array([(p != 0) for p in pred_downsampled], dtype=int)
+gt_present = np.array([(g != 0 and g != -1) for g in all_gt], dtype=int)
+pr_present = np.array([(p != 0) for p in y_pred], dtype=int)
 
 print(len(gt_present), len(pr_present), "compare lengths: gt and pred presence arrays")
-gt_present = gt_present[250:400]
-pr_present = pr_present[250:400]
-num_preds = len(pr_present)
-num_seqs = len(pr_present)
+# gt_present = gt_present[2200:3200]
+# pr_present = pr_present[2200:3200]
+# num_preds = len(pr_present)
 
 
 correct = gt_present == pr_present
@@ -88,7 +66,7 @@ labels_6 = [0, 2, 3, 4, 5, 6]
 label_names = ["absence", "standing", "sit-by-bed", "sit-on-bed", "lying-no-cover", "lying-w-cover"]
 
 # ── Plot: Binary presence time series ──────────────────────────────────────────
-frames = np.arange(num_seqs)
+frames = np.arange(num_preds)
 
 fig, axes = plt.subplots(2, 1, figsize=(8, 6), sharex=True)
 
@@ -110,7 +88,7 @@ axes[1].set_yticks([0, 1])
 axes[1].set_yticklabels(["absent", "present"])
 axes[1].set_ylim(-0.05, 1.15)
 axes[1].set_title(f"Predicted Binary Presence — {PREDICTIONS_PATH.name}", fontsize=13)
-axes[1].set_xlabel("Sequence Index", fontsize=12)
+axes[1].set_xlabel("Frame Index", fontsize=12)
 axes[1].grid(True, alpha=0.3)
 
 # fig.suptitle(f"Binary Presence Over Time  (accuracy={overall_acc:.4f})", fontsize=14, y=1.01)
@@ -137,7 +115,7 @@ ax2.step(frames, gt_present, where="post", linewidth=0.6, color="grey", alpha=0.
 ax2.set_yticks([0, 1])
 ax2.set_yticklabels(["absent", "present"])
 ax2.set_ylim(-0.1, 1.2)
-ax2.set_xlabel("Sequence Index", fontsize=12)
+ax2.set_xlabel("Frame Index", fontsize=12)
 ax2.set_ylabel("Presence", fontsize=12)
 # ax2.set_title(f"Binary Presence — GT (grey) vs. Pred (green/red)  acc={overall_acc:.4f}", fontsize=13)
 ax2.legend(loc="lower left")
@@ -161,10 +139,10 @@ print(f"  Precision: {prec:.4f}")
 print(f"  Recall   : {rec:.4f}")
 print(f"  F1 Score : {f1:.4f}")
 
-# per-class breakdown (per-sequence level)
+# per-class presence metrics
 for label, name in zip(labels_6[1:], label_names[1:]):
-    gt_c = (gt_downsampled == label).astype(int)
-    pr_c = (pred_downsampled == label).astype(int)
+    gt_c = (np.array(all_gt) == label).astype(int)
+    pr_c = (np.array(y_pred) == label).astype(int)
     acc_c = (gt_c == pr_c).mean()
     print(f"  {name:<20} acc={acc_c:.4f}")
 
