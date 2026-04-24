@@ -111,6 +111,9 @@ class Tracker:
         unmatched_existing_blobs_indices = set(range(num_existing)) - set([r for r, c in matched_pairs])
         unmatched_new_heat_sources_indices = set(range(num_detected)) - set([c for r, c in matched_pairs])
         # print("DEBUG: unmatched:", unmatched_existing_blobs_indices, unmatched_new_heat_sources_indices)
+
+        for blob in self.blobs:
+            blob.exit = False
         
         # B1. check for new heat sources that do not match existing blobs
         for source_idx in unmatched_new_heat_sources_indices:
@@ -138,6 +141,8 @@ class Tracker:
             if residual_index is not None and ori_index is not None:
                 self.update_relations(new_blob, self.blobs[ori_index])
 
+            if human_blob is not None:
+                human_blob.exit = True
             if residual_index is not None:
                 print("Human left the bed! Residual heat detected. Frame index: ", idx)
                 # self.split_event.append(idx)

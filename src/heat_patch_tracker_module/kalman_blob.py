@@ -72,6 +72,7 @@ class KalmanBlob(object):
         self.centroid_history = [] # if move is directional (in some segments), likely human
         self.kalman_centroid_history = []  # history of centroids from Kalman filter
         self.queue_len = 400 # length of history to keep, longer history for better analysis
+        self.exit = False
 
         self.bbox = mask_to_bbox(mask) if mask is not None else [0,0,0,0]
         self.kf = KalmanFilter(dim_x=7, dim_z=4) # kalman filter state: [x, y, s, r, vx, vy, vs], measurement: [x, y, s, r]. s is scale (area). r is aspect ratio. vs is the rate of change of area,
