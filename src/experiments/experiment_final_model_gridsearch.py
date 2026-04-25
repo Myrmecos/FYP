@@ -162,34 +162,36 @@ def entry_exist(entry_name, k = None, corr = None, v = None):
     entry_name = entry_name.split('/')[-1]
     json_path = f'/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/output/gridsearch/{entry_name}_{k}_{corr}_{v}.json'
     return Path(json_path).exists()
-# vis_presence_absence('/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/output/gridsearch/hall5_0.5_0.5_0.5.json')
-ks = [0.002, 0.003, 0.004, 0.005, 0.006]
-corrs = [-0.65, -0.70, -0.75, -0.80, -0.85, -0.90, -0.95]
-ks = [0.005]
-corrs = [-0.075]
-vs = [0.6, 0.8, 1.0, 1.2, 1.4]
-for k in ks:
-    for corr in corrs:
-        for v in vs:
-            preds = []
-            actuals = []
-            for train_path in train_path_lst:
-                # gt, pred = test_inference(train_path.split('/')[-1], k=k, corr=corr, v=1)
-                # gt, pred = load_inference_result(train_path, k = k, corr = corr, v = 1)
-                if entry_exist(train_path, k = k, corr = corr, v = 1):
-                    gt, pred = load_inference_result(train_path, k = k, corr = corr, v = v)
-                else:
-                    gt, pred = test_inference(train_path.split('/')[-1], k=k, corr=corr, v=v)
-                preds.extend(pred)
-                actuals.extend(gt)
-                print("k value:", k, "corr value:", corr, "v value:", v)
-                print("pred acc", sum([1 if p == a else 0 for p, a in zip(preds, actuals)]) / len(preds))
-            print("SUMMARY: == k value:", k, "corr value:", corr, "v value:", v)
-            print("SUMMARY: == pred acc", sum([1 if p == a else 0 for p, a in zip(preds, actuals)]) / len(preds))
-            # print presence-absence confusion
-            from sklearn.metrics import confusion_matrix
-            cm = confusion_matrix(actuals, preds)
-            print("Confusion Matrix:")
-            print(cm)
-            print("====================")
-        
+
+if __name__=="__main__":
+    # vis_presence_absence('/Users/entomophile/Desktop/FYP/entry_exit_detection/presence_detection_workspace/output/gridsearch/hall5_0.5_0.5_0.5.json')
+    ks = [0.002, 0.003, 0.004, 0.005, 0.006]
+    corrs = [-0.65, -0.70, -0.75, -0.80, -0.85, -0.90, -0.95]
+    ks = [0.005]
+    corrs = [-0.075]
+    vs = [0.6, 0.8, 1.0, 1.2, 1.4]
+    for k in ks:
+        for corr in corrs:
+            for v in vs:
+                preds = []
+                actuals = []
+                for train_path in train_path_lst:
+                    # gt, pred = test_inference(train_path.split('/')[-1], k=k, corr=corr, v=1)
+                    # gt, pred = load_inference_result(train_path, k = k, corr = corr, v = 1)
+                    if entry_exist(train_path, k = k, corr = corr, v = 1):
+                        gt, pred = load_inference_result(train_path, k = k, corr = corr, v = v)
+                    else:
+                        gt, pred = test_inference(train_path.split('/')[-1], k=k, corr=corr, v=v)
+                    preds.extend(pred)
+                    actuals.extend(gt)
+                    print("k value:", k, "corr value:", corr, "v value:", v)
+                    print("pred acc", sum([1 if p == a else 0 for p, a in zip(preds, actuals)]) / len(preds))
+                print("SUMMARY: == k value:", k, "corr value:", corr, "v value:", v)
+                print("SUMMARY: == pred acc", sum([1 if p == a else 0 for p, a in zip(preds, actuals)]) / len(preds))
+                # print presence-absence confusion
+                from sklearn.metrics import confusion_matrix
+                cm = confusion_matrix(actuals, preds)
+                print("Confusion Matrix:")
+                print(cm)
+                print("====================")
+            

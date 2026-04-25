@@ -35,7 +35,7 @@ class ThermalDatasetAggregator():
         self.annotations_expanded = self.annotations
     def __len__(self):
         "total number of frames"
-        lngth = min(len(self.img_files), len(self.ira_files), len(self.tof_files))
+        lngth = min(len(self.img_files), len(self.ira_files))
         return lngth
     
     def __getitem__(self, index):
@@ -210,7 +210,7 @@ class ThermalDataset(dataset.Dataset):
         if self.noCam:
             lngth = len(self.ira_files)
         else:
-            lngth = min(len(self.img_files), len(self.ira_files), len(self.tof_files))
+            lngth = min(len(self.img_files), len(self.ira_files)) #, len(self.tof_files))
         return lngth
     
     def get_annotation(self, index):
@@ -283,9 +283,9 @@ if __name__ == "__main__":
             img = dataset.get_image_ij(i, j)
             ira = dataset.get_ira_ij(i, j)
             ira_highres = dataset.get_ira_highres_ij(i, j)
-            tof = dataset.get_tof_ij(i, j)
-            print(f"Dataset {i} frame {j} shapes: img {img.shape}, ira {ira.shape}, ira_highres {ira_highres.shape}, tof {tof.shape}")
+            # tof = dataset.get_tof_ij(i, j)
+            print(f"Dataset {i} frame {j} shapes: img {img.shape}, ira {ira.shape}, ira_highres {ira_highres.shape}")
             color_thermal = visualizer.compose_color_and_thermal(img, ira, ira_highres)
-            cv2.imshow("Color and Thermal", color_thermal)
+            cv2.imshow("Color and Thermal (press any key to continue)", color_thermal)
             cv2.waitKey(0)
 

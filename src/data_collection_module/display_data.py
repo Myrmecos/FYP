@@ -173,7 +173,7 @@ def test1():
     cv2.waitKey(0)
     
 if __name__=="__main__":
-    base_dir = "data/Std06"
+    base_dir = "data/office0_4"
     dd = DataDisplayer()
     img_dir = base_dir + "/Camera"
     ira_dir = base_dir + "/IRA"
